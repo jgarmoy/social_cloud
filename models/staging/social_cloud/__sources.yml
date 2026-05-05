@@ -1,0 +1,158 @@
+version: 2
+
+sources:
+  - name: social_cloud_schema
+    database: social_cloud_bronze_db
+    tables:
+      - name: raw_audiencia_demografica
+        columns:
+          - name: _line
+            data_type: number
+          - name: _fivetran_synced
+            data_type: timestamp_tz 
+          - name: tk_handle
+            data_type: varchar
+          - name: tk_platform
+            data_type: varchar
+          - name: snapshot_date
+            data_type: date
+          - name: gender_segment
+            data_type: varchar
+          - name: age_segment
+            data_type: varchar
+          - name: country
+            data_type: varchar
+          - name: audience_share_pct
+            data_type: float
+          - name: seg_followers
+            data_type: float
+          - name: ig_username
+            data_type: varchar
+          - name: ig_platform
+            data_type: varchar
+          - name: report_date
+            data_type: date
+          - name: audience_gender
+            data_type: varchar
+          - name: audience_age
+            data_type: varchar
+          - name: audience_country
+            data_type: varchar
+          - name: pct_audience
+            data_type: float
+          - name: follower_count_seg
+            data_type: float
+          - name: yt_handle
+            data_type: varchar
+          - name: network
+            data_type: varchar
+          - name: period
+            data_type: date
+          - name: sexo
+            data_type: varchar
+          - name: edad
+            data_type: varchar
+          - name: pais_audiencia
+            data_type: varchar
+          - name: porcentaje
+            data_type: float
+          - name: n_seguidores_seg
+            data_type: float
+          - name: empresa_id
+            data_type: varchar
+          - name: perfil_id
+            data_type: varchar
+          - name: created_at
+            data_type: timestamp_ntz
+          - name: updated_at
+            data_type: timestamp_ntz
+
+      - name: raw_perfiles_empresas
+        columns:
+          - name: _line
+            data_type: number
+          - name: _fivetran_synced
+            data_type: timestamp_tz
+          - name: empresa_id
+            data_type: varchar
+          - name: empresa_nombre
+            data_type: varchar
+          - name: empresa_categoria
+            data_type: varchar
+          - name: empresa_pais
+            data_type: varchar
+          - name: empresa_web
+            data_type: varchar
+          - name: empresa_email
+            data_type: varchar
+          - name: perfil_id
+            data_type: varchar
+          - name: username
+            data_type: varchar
+          - name: plataforma
+            data_type: varchar
+          - name: fecha_creacion_perfil
+            data_type: date
+          - name: activo
+            data_type: boolean
+          - name: semana_snapshot
+            data_type: date
+          - name: seguidores
+            data_type: number
+          - name: alcance_semanal
+            data_type: number
+          - name: impresiones_semanales
+            data_type: number
+          - name: visitas_perfil
+            data_type: number
+          - name: created_at
+            data_type: timestamp_ntz
+          - name: updated_at
+            data_type: timestamp_ntz
+
+      - name: raw_posts_interacciones
+        columns:
+          - name: _line
+            data_type: number
+          - name: _fivetran_synced
+            data_type: timestamp_tz
+          - name: post_id
+            data_type: varchar
+          - name: raw_json_id
+            data_type: varchar
+          - name: username
+            data_type: varchar
+          - name: empresa_id
+            data_type: varchar
+          - name: plataforma
+            data_type: varchar
+          - name: fecha_publicacion
+            data_type: timestamp_ntz
+          - name: tipo_contenido
+            data_type: varchar
+          - name: descripcion
+            data_type: varchar
+          - name: patrocinado
+            data_type: boolean
+          - name: es_campana_bf
+            data_type: boolean
+          - name: hashtags
+            data_type: varchar
+          - name: visualizaciones
+            data_type: number
+          - name: alcance
+            data_type: number
+          - name: impresiones
+            data_type: number
+          - name: tipo_interaccion
+            data_type: varchar
+          - name: cantidad_interaccion
+            data_type: number
+          - name: engagement_total
+            data_type: number
+          - name: source_api
+            data_type: varchar
+          - name: created_at
+            data_type: timestamp_ntz
+          - name: updated_at
+            data_type: timestamp_ntz
