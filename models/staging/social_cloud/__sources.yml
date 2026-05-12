@@ -2,7 +2,7 @@ version: 2
 
 sources:
   - name: social_cloud_schema
-    database: social_cloud_bronze_db
+    database: "{{ env_var('DBT_ENVIRONMENTS', 'FAIL') }}_social_cloud_bronze_db"
     tables:
       - name: raw_audiencia_demografica
         columns:
