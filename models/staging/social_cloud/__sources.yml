@@ -2,14 +2,14 @@ version: 2
 
 sources:
   - name: social_cloud_schema
-    database: "{{ env_var('DBT_ENVIRONMENTS', 'FAIL') }}_social_cloud_bronze_db"
+    database: pro_social_cloud_bronze_db
     tables:
       - name: raw_audiencia_demografica
         columns:
           - name: _line
             data_type: number
           - name: _fivetran_synced
-            data_type: timestamp_tz 
+            data_type: timestamp_tz
           - name: tk_handle
             data_type: varchar
           - name: tk_platform
@@ -25,7 +25,7 @@ sources:
           - name: audience_share_pct
             data_type: float
           - name: seg_followers
-            data_type: float
+            data_type: number
           - name: ig_username
             data_type: varchar
           - name: ig_platform
@@ -41,7 +41,7 @@ sources:
           - name: pct_audience
             data_type: float
           - name: follower_count_seg
-            data_type: float
+            data_type: number
           - name: yt_handle
             data_type: varchar
           - name: network
@@ -57,7 +57,7 @@ sources:
           - name: porcentaje
             data_type: float
           - name: n_seguidores_seg
-            data_type: float
+            data_type: number
           - name: empresa_id
             data_type: varchar
           - name: perfil_id

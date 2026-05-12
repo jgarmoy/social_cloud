@@ -23,7 +23,7 @@ source as (
 ),
 generar_surrogate_key as (
     select 
-        {{ dbt_utils.generate_surrogate_key(['pais']) }} as id_pais,
+        {{ dbt_utils.generate_surrogate_key(["pais"]) }} as id_pais,
         pais as nombre
     from source
 )

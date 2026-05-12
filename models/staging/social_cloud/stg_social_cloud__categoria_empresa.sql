@@ -3,7 +3,7 @@ with source as (
 ),
 generar_surrogate_key as (
     select distinct
-        {{ dbt_utils.generate_surrogate_key(['lower(empresa_categoria)']) }} as id_categoria_empresa,
+        {{ dbt_utils.generate_surrogate_key(["lower(coalesce(empresa_categoria, 'Desconocido'))"]) }} as id_categoria_empresa,
         lower(empresa_categoria) as nombre
     from source
 )
