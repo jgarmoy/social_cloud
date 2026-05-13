@@ -1,0 +1,372 @@
+version: 2
+
+models:
+  - name: stg_social_cloud_schema__raw_audiencia_demografica
+    description: "Modelo staging que consolida métricas de audiencia demográfica provenientes de distintas plataformas sociales (TikTok, Instagram y YouTube), incluyendo segmentación por género, edad y país."
+
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - perfil_id
+            - snapshot_date
+            - gender_segment
+            - age_segment
+            - country
+
+    columns:
+      - name: empresa_id
+        data_type: varchar
+        description: "Identificador único de la empresa asociada al perfil."
+        tests:
+          - not_null
+
+      - name: perfil_id
+        data_type: varchar
+        description: "Identificador único del perfil social."
+        tests:
+          - not_null
+
+      - name: tk_handle
+        data_type: varchar
+        description: "Nombre de usuario o handle del perfil en TikTok."
+
+      - name: tk_platform
+        data_type: varchar
+        description: "Plataforma social asociada al registro de TikTok."
+        tests:
+          - accepted_values:
+              values: ['tiktok']
+
+      - name: snapshot_date
+        data_type: date
+        description: "Fecha de captura de las métricas demográficas."
+        tests:
+          - not_null
+
+      - name: gender_segment
+        data_type: varchar
+        description: "Segmento de género de la audiencia."
+
+      - name: age_segment
+        data_type: varchar
+        description: "Segmento de edad de la audiencia."
+
+      - name: country
+        data_type: varchar
+        description: "País asociado al segmento de audiencia."
+
+      - name: audience_share_pct
+        data_type: float
+        description: "Porcentaje de audiencia representado por el segmento."
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+
+      - name: seg_followers
+        data_type: number
+        description: "Número de seguidores pertenecientes al segmento demográfico."
+
+      - name: ig_username
+        data_type: varchar
+        description: "Nombre de usuario del perfil en Instagram."
+
+      - name: ig_platform
+        data_type: varchar
+        description: "Plataforma social asociada al registro de Instagram."
+        tests:
+          - accepted_values:
+              values: ['instagram']
+
+      - name: report_date
+        data_type: date
+        description: "Fecha del reporte de métricas de Instagram."
+
+      - name: audience_gender
+        data_type: varchar
+        description: "Género de la audiencia en Instagram."
+
+      - name: audience_age
+        data_type: varchar
+        description: "Segmento de edad de la audiencia en Instagram."
+
+      - name: audience_country
+        data_type: varchar
+        description: "País de origen de la audiencia en Instagram."
+
+      - name: pct_audience
+        data_type: float
+        description: "Porcentaje de audiencia asociado al segmento en Instagram."
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+
+      - name: follower_count_seg
+        data_type: number
+        description: "Cantidad de seguidores del segmento en Instagram."
+
+      - name: yt_handle
+        data_type: varchar
+        description: "Nombre del canal o handle en YouTube."
+
+      - name: network
+        data_type: varchar
+        description: "Red social o plataforma asociada al registro de YouTube."
+
+      - name: period
+        data_type: date
+        description: "Periodo temporal asociado a las métricas de YouTube."
+
+      - name: sexo
+        data_type: varchar
+        description: "Sexo de la audiencia en YouTube."
+
+      - name: edad
+        data_type: varchar
+        description: "Segmento de edad de la audiencia en YouTube."
+
+      - name: pais_audiencia
+        data_type: varchar
+        description: "País de la audiencia en YouTube."
+
+      - name: porcentaje
+        data_type: float
+        description: "Porcentaje de audiencia por segmento en YouTube."
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+
+      - name: n_seguidores_seg
+        data_type: number
+        description: "Número de seguidores pertenecientes al segmento en YouTube."
+
+      - name: created_at
+        data_type: timestamp_ntz
+        description: "Fecha de creación del registro."
+
+      - name: updated_at
+        data_type: timestamp_ntz
+        description: "Fecha de última actualización del registro."
+
+      - name: _line
+        data_type: number
+        description: "Número de línea del archivo origen."
+        tests:
+          - not_null
+
+      - name: _fivetran_synced
+        data_type: timestamp_tz
+        description: "Timestamp de sincronización de Fivetran."
+
+  - name: stg_social_cloud_schema__raw_perfiles_empresas
+    description: "Modelo staging que contiene información de empresas y perfiles sociales asociados, junto con métricas semanales de rendimiento."
+
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - empresa_id
+            - perfil_id
+            - semana_snapshot
+
+    columns:
+      - name: empresa_id
+        data_type: varchar
+        description: "Identificador único de la empresa."
+        tests:
+          - not_null
+
+      - name: empresa_nombre
+        data_type: varchar
+        description: "Nombre de la empresa."
+
+      - name: empresa_categoria
+        data_type: varchar
+        description: "Categoría o sector de la empresa."
+
+      - name: empresa_pais
+        data_type: varchar
+        description: "País de origen de la empresa."
+
+      - name: empresa_web
+        data_type: varchar
+        description: "Sitio web oficial de la empresa."
+
+      - name: empresa_email
+        data_type: varchar
+        description: "Correo electrónico de contacto de la empresa."
+
+      - name: perfil_id
+        data_type: varchar
+        description: "Identificador único del perfil social."
+        tests:
+          - not_null
+
+      - name: username
+        data_type: varchar
+        description: "Nombre de usuario del perfil social."
+
+      - name: plataforma
+        data_type: varchar
+        description: "Plataforma social del perfil."
+        tests:
+          - accepted_values:
+              values: ['instagram', 'facebook', 'tiktok', 'youtube', 'linkedin', 'x']
+
+      - name: fecha_creacion_perfil
+        data_type: date
+        description: "Fecha de creación del perfil social."
+
+      - name: activo
+        data_type: boolean
+        description: "Indica si el perfil se encuentra activo."
+
+      - name: semana_snapshot
+        data_type: date
+        description: "Fecha de referencia semanal de las métricas."
+        tests:
+          - not_null
+
+      - name: seguidores
+        data_type: number
+        description: "Cantidad de seguidores del perfil."
+
+      - name: alcance_semanal
+        data_type: number
+        description: "Alcance semanal del perfil."
+
+      - name: impresiones_semanales
+        data_type: number
+        description: "Cantidad de impresiones semanales."
+
+      - name: visitas_perfil
+        data_type: number
+        description: "Número de visitas al perfil."
+
+      - name: created_at
+        data_type: timestamp_ntz
+        description: "Fecha de creación del registro."
+
+      - name: updated_at
+        data_type: timestamp_ntz
+        description: "Fecha de actualización del registro."
+
+      - name: _line
+        data_type: number
+        description: "Número de línea del archivo origen."
+        tests:
+          - not_null
+
+      - name: _fivetran_synced
+        data_type: timestamp_tz
+        description: "Timestamp de sincronización de Fivetran."
+
+  - name: stg_social_cloud_schema__raw_posts_interacciones
+    description: "Modelo staging que almacena publicaciones de redes sociales y sus métricas de interacción y engagement."
+
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - post_id
+            - tipo_interaccion
+
+    columns:
+      - name: post_id
+        data_type: varchar
+        description: "Identificador único de la publicación."
+        tests:
+          - not_null
+
+      - name: raw_json_id
+        data_type: varchar
+        description: "Identificador del JSON origen."
+
+      - name: username
+        data_type: varchar
+        description: "Nombre de usuario asociado a la publicación."
+
+      - name: empresa_id
+        data_type: varchar
+        description: "Identificador de la empresa propietaria del perfil."
+        tests:
+          - not_null
+
+      - name: plataforma
+        data_type: varchar
+        description: "Plataforma social de la publicación."
+        tests:
+          - accepted_values:
+              values: ['instagram', 'facebook', 'tiktok', 'youtube', 'linkedin', 'x']
+
+      - name: fecha_publicacion
+        data_type: timestamp_ntz
+        description: "Fecha y hora de publicación del contenido."
+        tests:
+          - not_null
+
+      - name: tipo_contenido
+        data_type: varchar
+        description: "Tipo de contenido publicado (video, imagen, reel, story, etc.)."
+
+      - name: descripcion
+        data_type: varchar
+        description: "Texto descriptivo de la publicación."
+
+      - name: patrocinado
+        data_type: boolean
+        description: "Indica si el contenido es patrocinado."
+
+      - name: es_campania_bf
+        data_type: boolean
+        description: "Indica si la publicación pertenece a una campaña BF."
+
+      - name: hashtags
+        data_type: varchar
+        description: "Listado de hashtags utilizados en la publicación."
+
+      - name: visualizaciones_post
+        data_type: number
+        description: "Número de visualizaciones de la publicación."
+
+      - name: alcance_post
+        data_type: number
+        description: "Cantidad de usuarios alcanzados."
+
+      - name: impresiones_post
+        data_type: number
+        description: "Cantidad total de impresiones."
+
+      - name: tipo_interaccion
+        data_type: varchar
+        description: "Tipo de interacción registrada (likes, comentarios, compartidos, etc.)."
+
+      - name: cantidad_interaccion
+        data_type: number
+        description: "Cantidad total de interacciones del tipo especificado."
+
+      - name: engagement_total
+        data_type: number
+        description: "Métrica total de engagement de la publicación."
+
+      - name: source_api
+        data_type: varchar
+        description: "API o fuente origen de los datos."
+
+      - name: created_at
+        data_type: timestamp_ntz
+        description: "Fecha de creación del registro."
+
+      - name: updated_at
+        data_type: timestamp_ntz
+        description: "Fecha de actualización del registro."
+
+      - name: _line
+        data_type: number
+        description: "Número de línea del archivo origen."
+        tests:
+          - not_null
+
+      - name: _fivetran_synced
+        data_type: timestamp_tz
+        description: "Timestamp de sincronización de Fivetran."
