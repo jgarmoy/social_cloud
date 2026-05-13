@@ -3,7 +3,7 @@ with source as (
 ),
 renamed as (
     select 
-        {{ dbt_utils.generate_surrogate_key(["empresa_nombre"]) }} as id_empresa,
+        {{ dbt_utils.generate_surrogate_key(["empresa_nombre"]) }} as id_empresa, -- No hay nulos
         empresa_id as codigo_empresa,
         empresa_nombre as nombre,
         {{ dbt_utils.generate_surrogate_key(["lower(coalesce(empresa_pais, 'Desconocido'))"]) }} as id_pais,
@@ -11,5 +11,6 @@ renamed as (
         empresa_web as web,
         empresa_email as email
     from source
+    qualify row_number() over (partition by empresa_id order by empresa_web, empresa_email) = 1 -- Como no le doy mucha importancia a la web y al email me quedo con los ambos sean no nulos y sino uno de los dos aunque primero va la web, no veas lo que me ha costado. Quería y he conseguido particionar por empresa_id y así hacer que me de el resultado a ser posible que tenga ambas opciones
 )
-select * from renamed order by codigo_empresa
+select * from renamed
