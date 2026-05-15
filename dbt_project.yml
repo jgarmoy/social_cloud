@@ -27,12 +27,17 @@ clean-targets: # Directorios que se tienen que limpiar en un `dbt clean`
 models:
   social_cloud:
     staging:
-      +database: "{{ env_var('DBT_ENVIROMENTS', 'FAIL') }}_SOCIAL_CLOUD_SILVER_DB"
+      +database: "{{ env_var('DBT_ENVIRONMENTS', 'FAIL') }}_SOCIAL_CLOUD_SILVER_DB"
       +schema: staging
       +materialized: view # En staging se materializa como vistas para que obtenga los datos más frescos posibles (la consulta SQL se ejecuta cada vez zque se consulta la vista). Además, evita desperdiciar espacio en el almacén en modelos que no están pensados para ser consultados por los consumidores de datos (se almacena la lógica, no los datos).
+    
+    intermediate:
+      +database: "{{ env_var('DBT_ENVIRONMENTS', 'FAIL') }}_SOCIAL_CLOUD_SILVER_DB"
+      +schema: intermediate
+      +materialized: view
 
     marts:
-      +database: "{{ env_var('DBT_ENVIROMENTS', 'FAIL') }}_SOCIAL_CLOUD_GOLD_DB"
+      +database: "{{ env_var('DBT_ENVIRONMENTS', 'FAIL') }}_SOCIAL_CLOUD_GOLD_DB"
       +schema: marts
       +materialized: table
 
