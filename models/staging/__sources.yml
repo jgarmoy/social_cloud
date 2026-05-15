@@ -3,8 +3,18 @@ version: 2
 sources:
   - name: social_cloud_schema
     database: "{{ env_var('DBT_ENVIRONMENTS', 'FAIL') }}_social_cloud_bronze_db"
+    description: >
+      Capa bronze de Social Cloud. Datos crudos ingestados via Fivetran desde las APIs
+      de Instagram, TikTok y YouTube.
     tables:
       - name: raw_audiencia_demografica
+        description: >
+          Snapshots de segmentación de audiencia (género, edad, país) por perfil y plataforma.
+        config: 
+          freshness:
+            warn_after: { count: 8, period: day }
+            error_after: { count: 15, period: day }
+          loaded_at_field: _fivetran_synced
         columns:
           - name: _line
             data_type: number
@@ -68,6 +78,13 @@ sources:
             data_type: timestamp_ntz
 
       - name: raw_perfiles_empresas
+        description: >
+          Snapshot semanal de perfiles de empresa por plataforma con métricas de alcance.
+        config: 
+          freshness:
+            warn_after: { count: 8, period: day }
+            error_after: { count: 15, period: day }
+          loaded_at_field: _fivetran_synced
         columns:
           - name: _line
             data_type: number
@@ -111,6 +128,13 @@ sources:
             data_type: timestamp_ntz
 
       - name: raw_posts_interacciones
+        description: >
+          Registro crudo de posts y sus interacciones por tipo (like, comentario, guardado, compartir).
+        config: 
+          freshness:
+            warn_after: { count: 24, period: hour }
+            error_after: { count: 48, period: hour }
+          loaded_at_field: _fivetran_synced
         columns:
           - name: _line
             data_type: number
