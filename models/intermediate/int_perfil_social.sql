@@ -1,25 +1,18 @@
-with source as (
-    select * from {{ source('social_cloud_schema', 'raw_perfiles_empresas') }}
-),
-limpiar_plataformas as (
-    select
-        * exclude plataforma,
-        case
-            when regexp_like(trim(plataforma), '^(instagram|ig|insta)$', 'i') then 'instagram'
-            when regexp_like(trim(plataforma), '^(tiktok|tk|tik tok)$', 'i') then 'tiktok'
-            when regexp_like(trim(plataforma), '^(youtube|yt|you tube)$', 'i') then 'youtube'
-            else lower(plataforma)
-        end as plataforma
-    from source
-),
-renamed as (
-    select 
-        {{ dbt_utils.generate_surrogate_key(["substr(username, 2)"]) }} as id_perfil_empresa, -- Todos tienen @, select * from source where username not ilike '@%'
-        perfil_id as codigo_perfil_social,
-        {{ dbt_utils.generate_surrogate_key(["empresa_nombre"]) }} as id_empresa,
-        {{ dbt_utils.generate_surrogate_key(['plataforma']) }} as id_red_social,
-        
-    from limpiar_plataformas
-)
+with
+    source as (
+        select * from {{ ref("stg_social_cloud_schema__raw_perfiles_empresas") }}
+    ),
+    renamed as (
+        select distinct
+            {{ dbt_utils.generate_surrogate_key(["username"]) }} as id_perfil_social,
+            perfil_id as codigo_perfil_social,
+            {{ dbt_utils.generate_surrogate_key(["empresa_nombre"]) }} as id_empresa,
+            {{ dbt_utils.generate_surrogate_key(["plataforma"]) }} as id_red_social,
+            username as nombre_usuario,
+            fecha_creacion_perfil as fecha_creacion,
+            activo
+        from source
+    )
 
-select * from source where empresa_nombre is null
+select *
+from renamed
