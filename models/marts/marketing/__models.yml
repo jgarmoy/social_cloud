@@ -1,0 +1,535 @@
+version: 2
+
+models:
+
+  # ════════════════════════════════════════════════════════════
+  # DIMENSIONES
+  # ════════════════════════════════════════════════════════════
+
+  - name: dim_tipo_contenido
+    description: >
+      Dimensión de tipos de contenido publicado (Video, Story, Carrusel, Reel, Post Estático).
+    columns:
+      - name: id_tipo_contenido
+        data_type: varchar
+        description: >
+          Surrogate key generada desde tipo_contenido.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: nombre
+        data_type: varchar
+        description: >
+          Nombre del tipo de contenido (Video, Story, Carrusel, Reel, Post Estático).
+        data_tests:
+          - not_null
+          - unique
+
+  - name: dim_tipo_interaccion
+    description: >
+      Dimensión de tipos de interacción (Like, Comentario, Guardado, Compartir).
+    columns:
+      - name: id_tipo_interaccion
+        data_type: varchar
+        description: >
+          Surrogate key generada desde tipo_interaccion.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: nombre
+        data_type: varchar
+        description: >
+          Nombre del tipo de interacción (Like, Comentario, Guardado, Compartir).
+        data_tests:
+          - not_null
+          - unique
+
+  - name: dim_fuente_ingesta
+    description: >
+      Dimensión de fuentes de ingesta. Valores únicos de source_api en staging posts.
+    columns:
+      - name: id_fuente_ingesta
+        data_type: varchar
+        description: >
+          Surrogate key generada desde source_api.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: nombre
+        data_type: varchar
+        description: >
+          Nombre de la fuente de ingesta (api_v1, api_v2, manual_export).
+        data_tests:
+          - not_null
+          - unique
+
+  - name: dim_genero
+    description: >
+      Dimensión de géneros de audiencia unificados entre TikTok, Instagram y YouTube.
+    columns:
+      - name: id_genero
+        data_type: varchar
+        description: >
+          Surrogate key generada desde el valor de género.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: nombre
+        data_type: varchar
+        description: >
+          Nombre del género de audiencia unificado entre plataformas.
+        data_tests:
+          - not_null
+          - unique
+
+  - name: dim_rango_edad
+    description: >
+      Dimensión de rangos de edad con límites numéricos edad_min y edad_max
+      para facilitar filtros y ordenaciones en Power BI. edad_max es NULL intencional
+      para el rango 55+.
+    columns:
+      - name: id_rango_edad
+        data_type: varchar
+        description: >
+          Surrogate key generada desde el valor de rango_edad.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: rango_edad
+        data_type: varchar
+        description: >
+          Rango de edad en formato string (18-24, 25-34, 35-44, 45-54, 55+).
+        data_tests:
+          - not_null
+          - unique
+
+      - name: edad_min
+        data_type: number
+        description: >
+          Límite inferior del rango. Campo derivado parseado desde rango_edad.
+        data_tests:
+          - not_null
+
+      - name: edad_max
+        data_type: number
+        description: >
+          Límite superior del rango. NULL intencional para el rango 55+.
+
+  - name: dim_hashtag
+    description: >
+      Dimensión de hashtags únicos extraídos de los posts. Sin '#', en lowercase.
+    columns:
+      - name: id_hashtag
+        data_type: varchar
+        description: >
+          Surrogate key generada desde el valor del hashtag.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: hashtag
+        data_type: varchar
+        description: >
+          Hashtag individual sin '#' y en lowercase.
+        data_tests:
+          - not_null
+          - unique
+
+  - name: bridge_post_hashtag
+    description: >
+      Tabla puente entre fct_rendimiento_contenido y dim_hashtag.
+      Patrón de uso: fct_rendimiento_contenido → bridge_post_hashtag → dim_hashtag.
+      Al hacer el join tener en cuenta que multiplica las filas del fact
+      por el número de hashtags del post.
+    columns:
+      - name: id_post
+        data_type: varchar
+        description: >
+          FK hacia fct_rendimiento_contenido.
+        data_tests:
+          - not_null
+
+      - name: id_hashtag
+        data_type: varchar
+        description: >
+          FK hacia dim_hashtag.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_hashtag')
+                field: id_hashtag
+
+  # ════════════════════════════════════════════════════════════
+  # TABLAS DE HECHOS
+  # ════════════════════════════════════════════════════════════
+
+  - name: fct_rendimiento_contenido
+    description: >
+      Hecho de rendimiento de contenido. Grano: post × tipo_interaccion.
+      Hasta 4 filas por post (Like, Comentario, Guardado, Compartir).
+      Las métricas de post (visualizaciones, alcance, impresiones, engagement_total)
+      se repiten en las 4 filas — al agregar sin filtrar por tipo_interaccion
+      usar engagement_total directamente o deduplicar previamente por id_post.
+    columns:
+      - name: id_interaccion
+        data_type: varchar
+        description: >
+          PK. Surrogate key de post × tipo_interaccion.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: id_post
+        data_type: varchar
+        description: >
+          Agrupador natural de métricas de post. No es único — aparece hasta 4 veces
+          por post, una por tipo de interacción.
+        data_tests:
+          - not_null
+
+      - name: id_perfil_social
+        data_type: varchar
+        description: >
+          FK hacia dim_perfil_social.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_perfil_social')
+                field: id_perfil_social
+
+      - name: id_tipo_interaccion
+        data_type: varchar
+        description: >
+          FK hacia dim_tipo_interaccion.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_tipo_interaccion')
+                field: id_tipo_interaccion
+
+      - name: id_tipo_contenido
+        data_type: varchar
+        description: >
+          FK hacia dim_tipo_contenido.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_tipo_contenido')
+                field: id_tipo_contenido
+
+      - name: id_fuente_ingesta
+        data_type: varchar
+        description: >
+          FK hacia dim_fuente_ingesta.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_fuente_ingesta')
+                field: id_fuente_ingesta
+
+      - name: id_fecha
+        data_type: int
+        description: >
+          FK hacia dim_fecha en formato YYYYMMDD. Derivado de fecha_publicacion.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_fecha')
+                field: id_fecha
+
+      - name: codigo_post
+        data_type: varchar
+        description: >
+          Identificador natural del post en la plataforma de origen.
+        data_tests:
+          - not_null
+
+      - name: descripcion_en
+        data_type: varchar
+        description: >
+          Texto descriptivo del post en inglés. Puede ser nulo (~7% de registros).
+
+      - name: patrocinado
+        data_type: boolean
+        description: >
+          Indica si el post es contenido patrocinado.
+        data_tests:
+          - not_null
+
+      - name: es_campania
+        data_type: boolean
+        description: >
+          Indica si el post pertenece a una campaña de Black Friday.
+        data_tests:
+          - not_null
+
+      - name: visualizaciones
+        data_type: number
+        description: >
+          Total de visualizaciones del post. Mismo valor en las 4 filas del post.
+          Deduplicar por id_post antes de sumar a nivel de análisis.
+        data_tests:
+          - not_null
+
+      - name: alcance
+        data_type: number
+        description: >
+          Cuentas únicas que vieron el post. Mismo valor en las 4 filas del post.
+        data_tests:
+          - not_null
+
+      - name: impresiones
+        data_type: number
+        description: >
+          Total de veces que se mostró el post, incluyendo vistas repetidas.
+          Mismo valor en las 4 filas del post.
+        data_tests:
+          - not_null
+
+      - name: engagement_total
+        data_type: number
+        description: >
+          Suma de todas las interacciones del post (likes + comentarios + guardados + compartidos).
+          Mismo valor en las 4 filas del post. Usar directamente para totales sin deduplicar.
+        data_tests:
+          - not_null
+
+      - name: total_interaccion
+        data_type: number
+        description: >
+          Número de interacciones del tipo indicado por id_tipo_interaccion para este post.
+          Varía entre las 4 filas del mismo post.
+        data_tests:
+          - not_null
+
+      - name: engagement_rate_pct
+        data_type: float
+        description: >
+          Ratio de engagement calculado como engagement_total / alcance × 100.
+          NULL si alcance = 0.
+
+      - name: created_at
+        data_type: timestamp_ntz
+        description: >
+          Timestamp de creación del registro en la fuente.
+        data_tests:
+          - not_null
+
+      - name: updated_at
+        data_type: timestamp_ntz
+        description: >
+          Timestamp de última actualización en la fuente.
+
+      - name: _fivetran_synced
+        data_type: timestamp_tz
+        description: >
+          Timestamp de la última sincronización de Fivetran. Watermark para incremental.
+        data_tests:
+          - not_null
+
+  - name: fct_metrica_perfil
+    description: >
+      Hecho de evolución semanal de perfiles sociales. Grano: perfil × semana_snapshot.
+      Permite analizar crecimiento de seguidores, alcance e impresiones semana a semana.
+    columns:
+      - name: id_metrica_perfil
+        data_type: varchar
+        description: >
+          PK. Surrogate key generada desde username + plataforma + semana_snapshot.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: id_perfil_social
+        data_type: varchar
+        description: >
+          FK hacia dim_perfil_social.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_perfil_social')
+                field: id_perfil_social
+
+      - name: id_fecha
+        data_type: int
+        description: >
+          FK hacia dim_fecha en formato YYYYMMDD. Derivado de semana_snapshot.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_fecha')
+                field: id_fecha
+
+      - name: semana_snapshot
+        data_type: date
+        description: >
+          Fecha de inicio de la semana del snapshot (lunes).
+        data_tests:
+          - not_null
+
+      - name: seguidores
+        data_type: number
+        description: >
+          Número total de seguidores del perfil en esta semana.
+        data_tests:
+          - not_null
+
+      - name: alcance_semanal
+        data_type: number
+        description: >
+          Cuentas únicas alcanzadas durante la semana.
+        data_tests:
+          - not_null
+
+      - name: impresiones_semanales
+        data_type: number
+        description: >
+          Total de impresiones acumuladas en la semana, incluyendo vistas repetidas.
+        data_tests:
+          - not_null
+
+      - name: visitas_perfil
+        data_type: number
+        description: >
+          Visitas directas al perfil durante la semana.
+        data_tests:
+          - not_null
+
+      - name: tasa_alcance_pct
+        data_type: float
+        description: >
+          Porcentaje de seguidores alcanzados en la semana (alcance_semanal / seguidores × 100).
+          NULL si seguidores = 0.
+
+      - name: tasa_cobertura_pct
+        data_type: float
+        description: >
+          Porcentaje de impresiones que llegaron a usuarios únicos
+          (alcance_semanal / impresiones_semanales × 100). NULL si impresiones = 0.
+
+      - name: created_at
+        data_type: timestamp_ntz
+        description: >
+          Timestamp de creación del registro en la fuente.
+        data_tests:
+          - not_null
+
+      - name: updated_at
+        data_type: timestamp_ntz
+        description: >
+          Timestamp de última actualización en la fuente.
+
+  - name: fct_segmento_audiencia
+    description: >
+      Hecho de composición demográfica de audiencia. Grano: perfil × snapshot × género × edad × país.
+      Permite analizar cómo está compuesta la audiencia de cada perfil y su evolución en el tiempo.
+    columns:
+      - name: id_audiencia
+        data_type: varchar
+        description: >
+          PK. Surrogate key generada desde username, plataforma, genero,
+          edad_segmento, pais y fecha_snapshot.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: id_perfil_social
+        data_type: varchar
+        description: >
+          FK hacia dim_perfil_social.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_perfil_social')
+                field: id_perfil_social
+
+      - name: id_genero
+        data_type: varchar
+        description: >
+          FK hacia dim_genero.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_genero')
+                field: id_genero
+
+      - name: id_rango_edad
+        data_type: varchar
+        description: >
+          FK hacia dim_rango_edad.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_rango_edad')
+                field: id_rango_edad
+
+      - name: id_pais
+        data_type: varchar
+        description: >
+          FK hacia dim_pais.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_pais')
+                field: id_pais
+
+      - name: id_fecha
+        data_type: int
+        description: >
+          FK hacia dim_fecha en formato YYYYMMDD. Derivado de fecha_snapshot.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_fecha')
+                field: id_fecha
+
+      - name: fecha_snapshot
+        data_type: date
+        description: >
+          Fecha del snapshot de audiencia.
+        data_tests:
+          - not_null
+
+      - name: porcentaje
+        data_type: float
+        description: >
+          Porcentaje de la audiencia total que corresponde a este segmento demográfico (0-100).
+        data_tests:
+          - not_null
+
+      - name: seguidores
+        data_type: number
+        description: >
+          Número absoluto de seguidores en este segmento demográfico.
+        data_tests:
+          - not_null
+
+      - name: created_at
+        data_type: timestamp_ntz
+        description: >
+          Timestamp de creación del registro en la fuente.
+        data_tests:
+          - not_null
+
+      - name: updated_at
+        data_type: timestamp_ntz
+        description: >
+          Timestamp de última actualización en la fuente.

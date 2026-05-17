@@ -1,0 +1,157 @@
+version: 2
+
+models:
+
+  - name: int_pais
+    description: >
+      Dimensión de países. Unión de empresa_pais (staging perfiles) y pais (audiencia demográfica).
+      initcap aplicado en ambas fuentes antes de la unión para evitar duplicados por capitalización.
+    columns:
+      - name: id_pais
+        data_type: varchar
+        description: Clave surrogate generada desde el nombre del país.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: nombre
+        data_type: varchar
+        data_tests:
+          - not_null
+          - unique
+
+  - name: int_categoria_empresa
+    description: Dimensión de categorías de empresa. Valores únicos de empresa_categoria en staging.
+    columns:
+      - name: id_categoria_empresa
+        data_type: varchar
+        data_tests:
+          - not_null
+          - unique
+
+      - name: nombre
+        data_type: varchar
+        data_tests:
+          - not_null
+          - unique
+
+  - name: int_empresa
+    description: >
+      Dimensión de empresas. Un registro por empresa (empresa_id).
+      Surrogate key generada desde empresa_id.
+      El QUALIFY prioriza registros con web y email no nulos; desempate por created_at asc.
+    columns:
+      - name: id_empresa
+        data_type: varchar
+        description: Clave surrogate generada desde empresa_id.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: codigo_empresa
+        data_type: varchar
+        description: Identificador natural de la empresa (empresa_id en staging).
+        data_tests:
+          - not_null
+          - unique
+
+      - name: nombre
+        data_type: varchar
+        data_tests:
+          - not_null
+
+      - name: id_pais
+        data_type: varchar
+        description: FK hacia int_pais. Generada desde empresa_pais.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_pais')
+                field: id_pais
+
+      - name: id_categoria_empresa
+        data_type: varchar
+        description: FK hacia int_categoria_empresa.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_categoria_empresa')
+                field: id_categoria_empresa
+
+      - name: web
+        data_type: varchar
+
+      - name: email
+        data_type: varchar
+
+  - name: int_red_social
+    description: Dimensión de redes sociales. Valores únicos de plataforma en staging perfiles.
+    columns:
+      - name: id_red_social
+        data_type: varchar
+        data_tests:
+          - not_null
+          - unique
+
+      - name: nombre
+        data_type: varchar
+        data_tests:
+          - not_null
+          - unique
+
+  - name: int_perfil_social
+    description: >
+      Dimensión de perfiles sociales. Un registro por username + plataforma.
+      Surrogate key compuesta porque el mismo handle puede existir en varias redes.
+      El QUALIFY conserva el registro más reciente si hay múltiples perfil_id
+      para la misma combinación username + plataforma.
+    columns:
+      - name: id_perfil_social
+        data_type: varchar
+        description: Clave surrogate generada desde username + plataforma.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: codigo_perfil_social
+        data_type: varchar
+        description: Identificador natural del perfil (perfil_id en staging).
+        data_tests:
+          - not_null
+
+      - name: id_empresa
+        data_type: varchar
+        description: FK hacia int_empresa. Generada desde empresa_id.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_empresa')
+                field: id_empresa
+
+      - name: id_red_social
+        data_type: varchar
+        description: FK hacia int_red_social. Generada desde plataforma.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_red_social')
+                field: id_red_social
+
+      - name: nombre_usuario
+        data_type: varchar
+        data_tests:
+          - not_null
+
+      - name: fecha_creacion
+        data_type: date
+        data_tests:
+          - not_null
+
+      - name: activo
+        data_type: boolean
+        data_tests:
+          - not_null

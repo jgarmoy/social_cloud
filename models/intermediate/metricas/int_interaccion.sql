@@ -1,6 +1,18 @@
+{{
+    config(
+        materialized="incremental",
+        incremental_strategy="append",
+        on_schema_change="append_new_columns",
+    )
+}}
+
 with
     source as (
-        select * from {{ ref("stg_social_cloud_schema__raw_posts_interacciones") }}
+        select *
+        from {{ ref("stg_social_cloud_schema__raw_posts_interacciones") }}
+        {% if is_incremental() %}
+            where _fivetran_synced > (select max(_fivetran_synced) from {{ this }})
+        {% endif %}
     ),
 
     renamed as (

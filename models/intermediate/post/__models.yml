@@ -1,0 +1,215 @@
+version: 2
+
+models:
+
+  - name: int_tipo_contenido
+    description: Dimensión de tipos de contenido. Valores únicos de tipo_contenido en staging posts.
+    columns:
+      - name: id_tipo_contenido
+        data_type: varchar
+        data_tests:
+          - not_null
+          - unique
+
+      - name: nombre
+        data_type: varchar
+        data_tests:
+          - not_null
+          - unique
+
+  - name: int_tipo_interaccion
+    description: Dimensión de tipos de interacción. Valores únicos de tipo_interaccion en staging posts.
+    columns:
+      - name: id_tipo_interaccion
+        data_type: varchar
+        data_tests:
+          - not_null
+          - unique
+
+      - name: nombre
+        data_type: varchar
+        data_tests:
+          - not_null
+          - unique
+
+  - name: int_fuente_ingesta
+    description: Dimensión de fuentes de ingesta. Valores únicos de source_api en staging posts.
+    columns:
+      - name: id_fuente_ingesta
+        data_type: varchar
+        data_tests:
+          - not_null
+          - unique
+
+      - name: nombre
+        data_type: varchar
+        data_tests:
+          - not_null
+          - unique
+
+  - name: int_hashtag_post_separar
+    description: >
+      Modelo auxiliar. Explota la cadena de hashtags de cada post en filas individuales.
+      Filtra NULLs, strings vacíos y tokens vacíos generados por espacios dobles.
+      Normaliza quitando '#' si existe y aplicando lowercase.
+      Paso previo a int_hashtag e int_post_hashtag.
+    columns:
+      - name: post_id
+        data_type: varchar
+        data_tests:
+          - not_null
+
+      - name: plataforma
+        data_type: varchar
+        data_tests:
+          - not_null
+
+      - name: hashtag
+        data_type: varchar
+        description: Hashtag individual sin '#', en lowercase.
+        data_tests:
+          - not_null
+
+  - name: int_hashtag
+    description: Dimensión de hashtags únicos generada desde int_hashtag_post_separar.
+    columns:
+      - name: id_hashtag
+        data_type: varchar
+        data_tests:
+          - not_null
+          - unique
+
+      - name: hashtag
+        data_type: varchar
+        data_tests:
+          - not_null
+          - unique
+
+  - name: int_post_hashtag
+    description: >
+      Tabla puente post ↔ hashtag.
+      Cada fila representa una relación única entre un post y un hashtag.
+    columns:
+      - name: id_post
+        data_type: varchar
+        description: FK hacia int_post.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_post')
+                field: id_post
+
+      - name: id_hashtag
+        data_type: varchar
+        description: FK hacia int_hashtag.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_hashtag')
+                field: id_hashtag
+
+  - name: int_post
+    description: >
+      Hecho central de posts. Grano: un registro por post único (post_id).
+      Colapsa las hasta 4 filas por post de staging mediante QUALIFY conservando el más reciente.
+      Las interacciones por tipo se mantienen en int_interaccion.
+      Materializado como incremental append; el filtro _fivetran_synced evita reprocesar.
+    columns:
+      - name: id_post
+        data_type: varchar
+        description: Clave surrogate generada desde post_id.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: codigo_post
+        data_type: varchar
+        description: Identificador natural del post (post_id en staging).
+        data_tests:
+          - not_null
+
+      - name: raw_json_id
+        data_type: varchar
+        data_tests:
+          - not_null
+
+      - name: id_perfil_social
+        data_type: varchar
+        description: FK hacia int_perfil_social. Generada desde username + plataforma.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_perfil_social')
+                field: id_perfil_social
+
+      - name: id_tipo_contenido
+        data_type: varchar
+        description: FK hacia int_tipo_contenido. Generada desde tipo_contenido.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_tipo_contenido')
+                field: id_tipo_contenido
+
+      - name: id_fuente_ingesta
+        data_type: varchar
+        description: FK hacia int_fuente_ingesta. Generada desde source_api.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_fuente_ingesta')
+                field: id_fuente_ingesta
+
+      - name: es_campania
+        data_type: boolean
+        data_tests:
+          - not_null
+
+      - name: descripcion_en
+        data_type: varchar
+        description: Puede ser nulo (~7% de registros).
+
+      - name: patrocinado
+        data_type: boolean
+        data_tests:
+          - not_null
+
+      - name: visualizaciones
+        data_type: number
+        data_tests:
+          - not_null
+
+      - name: alcance
+        data_type: number
+        data_tests:
+          - not_null
+
+      - name: impresiones
+        data_type: number
+        data_tests:
+          - not_null
+
+      - name: engagement_total
+        data_type: number
+        description: Suma total de todas las interacciones del post.
+        data_tests:
+          - not_null
+
+      - name: created_at
+        data_type: timestamp_ntz
+        data_tests:
+          - not_null
+
+      - name: updated_at
+        data_type: timestamp_ntz
+
+      - name: _fivetran_synced
+        data_type: timestamp_tz
+        description: Watermark para la estrategia incremental.
+        data_tests:
+          - not_null

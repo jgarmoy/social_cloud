@@ -1,0 +1,131 @@
+version: 2
+
+snapshots:
+
+  - name: snp_perfil_social
+    description: >
+      Historial de cambios de perfiles sociales (SCD Type 2).
+      Captura variaciones en el estado del perfil: activaciones, desactivaciones,
+      cambios de nombre de usuario y reasignaciones de empresa.
+      La clave única es codigo_perfil_social (perfil_id en staging).
+      Alimenta dim_perfil_social en gold — filtrar es_vigente = true para vista actual.
+    config:
+      target_schema: snapshots
+      unique_key: codigo_perfil_social
+      strategy: check
+      check_cols:
+        - activo
+        - nombre_usuario
+        - id_empresa
+        - id_red_social
+      invalidate_hard_deletes: true
+    columns:
+      - name: id_perfil_social
+        data_type: varchar
+        description: Clave surrogate generada desde username + plataforma.
+
+      - name: codigo_perfil_social
+        data_type: varchar
+        description: Clave natural del perfil. Clave única del snapshot.
+
+      - name: id_empresa
+        data_type: varchar
+        description: FK hacia int_empresa. Monitorizado para detectar reasignaciones.
+
+      - name: id_red_social
+        data_type: varchar
+        description: FK hacia int_red_social. Monitorizado para detectar cambios de plataforma.
+
+      - name: nombre_usuario
+        data_type: varchar
+        description: Handle del perfil. Monitorizado para detectar cambios de nombre.
+
+      - name: fecha_creacion
+        data_type: date
+        description: Fecha de creación del perfil en la plataforma.
+
+      - name: activo
+        data_type: boolean
+        description: Estado del perfil. Un cambio a false genera una nueva versión en el snapshot.
+
+      - name: dbt_scd_id
+        data_type: varchar
+        description: Identificador único de cada versión del registro. Generado por dbt.
+
+      - name: dbt_updated_at
+        data_type: timestamp_ntz
+        description: Timestamp en que dbt detectó el cambio que generó esta versión.
+
+      - name: dbt_valid_from
+        data_type: timestamp_ntz
+        description: Inicio del período de validez de esta versión.
+
+      - name: dbt_valid_to
+        data_type: timestamp_ntz
+        description: >
+          Fin del período de validez. NULL indica registro vigente.
+          En gold se expone como valido_hasta y se deriva es_vigente desde este campo.
+
+  - name: snp_empresa
+    description: >
+      Historial de cambios de empresas (SCD Type 2).
+      Captura variaciones en nombre, país, categoría, web y email.
+      La clave única es codigo_empresa (empresa_id en staging).
+      Alimenta dim_empresa en gold — filtrar es_vigente = true para vista actual.
+    config:
+      target_schema: snapshots
+      unique_key: codigo_empresa
+      strategy: check
+      check_cols:
+        - nombre
+        - id_pais
+        - id_categoria_empresa
+        - web
+        - email
+      invalidate_hard_deletes: true
+    columns:
+      - name: id_empresa
+        data_type: varchar
+        description: Clave surrogate generada desde empresa_id.
+
+      - name: codigo_empresa
+        data_type: varchar
+        description: Clave natural de la empresa. Clave única del snapshot.
+
+      - name: nombre
+        data_type: varchar
+        description: Nombre legal o comercial. Monitorizado para detectar cambios.
+
+      - name: id_pais
+        data_type: varchar
+        description: FK hacia int_pais. Monitorizado — una empresa puede cambiar de país.
+
+      - name: id_categoria_empresa
+        data_type: varchar
+        description: FK hacia int_categoria_empresa. Monitorizado — puede cambiar de sector.
+
+      - name: web
+        data_type: varchar
+        description: URL del sitio web corporativo. Monitorizado. Puede ser nulo.
+
+      - name: email
+        data_type: varchar
+        description: Email de contacto. Monitorizado. Puede ser nulo.
+
+      - name: dbt_scd_id
+        data_type: varchar
+        description: Identificador único de cada versión del registro. Generado por dbt.
+
+      - name: dbt_updated_at
+        data_type: timestamp_ntz
+        description: Timestamp en que dbt detectó el cambio que generó esta versión.
+
+      - name: dbt_valid_from
+        data_type: timestamp_ntz
+        description: Inicio del período de validez de esta versión.
+
+      - name: dbt_valid_to
+        data_type: timestamp_ntz
+        description: >
+          Fin del período de validez. NULL indica registro vigente.
+          En gold se expone como valido_hasta y se deriva es_vigente desde este campo.

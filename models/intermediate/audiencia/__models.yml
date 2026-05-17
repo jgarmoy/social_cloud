@@ -1,0 +1,208 @@
+version: 2
+
+models:
+
+  - name: int_audiencia_demografica
+    description: >
+      Unificación de los tres bloques de audiencia demográfica (TikTok, Instagram, YouTube)
+      en una estructura única y normalizada. La plataforma se infiere desde el handle,
+      no desde la columna platform de la fuente. Se descartan filas sin username,
+      plataforma o fecha_snapshot identificables.
+    columns:
+      - name: empresa_id
+        data_type: varchar
+        data_tests:
+          - not_null
+
+      - name: perfil_id
+        data_type: varchar
+        data_tests:
+          - not_null
+
+      - name: username
+        data_type: varchar
+        description: Coalesce de tk_handle, ig_username, yt_handle.
+        data_tests:
+          - not_null
+
+      - name: plataforma
+        data_type: varchar
+        description: >
+          Inferida desde el handle. Campo nuevo respecto a staging — en staging
+          cada plataforma tenía su propia columna (tk_platform, ig_platform, network).
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["Instagram", "Tiktok", "Youtube"]
+
+      - name: fecha_snapshot
+        data_type: date
+        description: Coalesce de snapshot_date, report_date y period.
+        data_tests:
+          - not_null
+
+      - name: genero
+        data_type: varchar
+        description: Coalesce de gender_segment, audience_gender, genero.
+        data_tests:
+          - not_null
+
+      - name: edad_segmento
+        data_type: varchar
+        description: Coalesce de age_segment, audience_age, edad.
+        data_tests:
+          - not_null
+
+      - name: pais
+        data_type: varchar
+        description: Coalesce de country, audience_country, pais_audiencia.
+        data_tests:
+          - not_null
+
+      - name: porcentaje_audiencia
+        data_type: float
+        description: Coalesce de audience_share_pct, pct_audience, porcentaje.
+        data_tests:
+          - not_null
+
+      - name: seguidores
+        data_type: number
+        description: Coalesce de seg_followers, follower_count_seg, n_seguidores_seg.
+        data_tests:
+          - not_null
+
+      - name: created_at
+        data_type: timestamp_ntz
+        data_tests:
+          - not_null
+
+      - name: updated_at
+        data_type: timestamp_ntz
+
+      - name: _fivetran_synced
+        data_type: timestamp_tz
+        data_tests:
+          - not_null
+
+  - name: int_genero
+    description: >
+      Dimensión de géneros de audiencia. Valores únicos unificados entre TikTok,
+      Instagram y YouTube desde int_audiencia_demografica.
+    columns:
+      - name: id_genero
+        data_type: varchar
+        data_tests:
+          - not_null
+          - unique
+
+      - name: nombre
+        data_type: varchar
+        data_tests:
+          - not_null
+          - unique
+
+  - name: int_rango_edad
+    description: >
+      Dimensión de rangos de edad con límites numéricos edad_min y edad_max
+      para facilitar filtros y ordenaciones en gold. edad_max es NULL para 55+.
+    columns:
+      - name: id_rango_edad
+        data_type: varchar
+        data_tests:
+          - not_null
+          - unique
+
+      - name: rango_edad
+        data_type: varchar
+        data_tests:
+          - not_null
+          - unique
+
+      - name: edad_min
+        data_type: number
+        description: Campo derivado parseado desde rango_edad. No existe en staging.
+        data_tests:
+          - not_null
+
+      - name: edad_max
+        data_type: number
+        description: >
+          Campo derivado parseado desde rango_edad. NULL intencional para el rango 55+.
+
+  - name: int_audiencia
+    description: >
+      Hecho de audiencia demográfica con claves surrogate.
+      Grano: perfil × plataforma × género × edad × país × fecha_snapshot.
+    columns:
+      - name: id_audiencia
+        data_type: varchar
+        description: >
+          Clave surrogate. Generada desde username, plataforma, genero,
+          edad_segmento, pais y fecha_snapshot.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: id_perfil_social
+        data_type: varchar
+        description: FK hacia int_perfil_social. Generada desde username + plataforma.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_perfil_social')
+                field: id_perfil_social
+
+      - name: id_genero
+        data_type: varchar
+        description: FK hacia int_genero.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_genero')
+                field: id_genero
+
+      - name: id_rango_edad
+        data_type: varchar
+        description: FK hacia int_rango_edad.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_rango_edad')
+                field: id_rango_edad
+
+      - name: id_pais
+        data_type: varchar
+        description: FK hacia int_pais.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_pais')
+                field: id_pais
+
+      - name: fecha_snapshot
+        data_type: date
+        data_tests:
+          - not_null
+
+      - name: porcentaje
+        data_type: float
+        data_tests:
+          - not_null
+
+      - name: seguidores
+        data_type: number
+        data_tests:
+          - not_null
+
+      - name: created_at
+        data_type: timestamp_ntz
+        data_tests:
+          - not_null
+
+      - name: updated_at
+        data_type: timestamp_ntz

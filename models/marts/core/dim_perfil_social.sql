@@ -1,7 +1,7 @@
 with
-    perfil as (select * from {{ ref("int_perfil_social") }}),
+    perfil as (select * from {{ ref("snp_perfil_social") }}),
 
-    empresa as (select * from {{ ref("dim_empresa") }}),
+    empresa as (select * from {{ ref("int_empresa") }}),
 
     red_social as (select * from {{ ref("int_red_social") }}),
 
@@ -18,7 +18,10 @@ with
             e.nombre as empresa_nombre,
             e.codigo_empresa,
             e.pais as empresa_pais,
-            e.categoria as empresa_categoria
+            e.categoria as empresa_categoria,
+            p.dbt_valid_from as valido_desde,
+            p.dbt_valid_to as valido_hasta,
+            (p.dbt_valid_to is null)::boolean as es_vigente
 
         from perfil p
         left join red_social r on p.id_red_social = r.id_red_social

@@ -1,0 +1,95 @@
+version: 2
+
+models:
+
+  - name: int_interaccion
+    description: >
+      Métricas de interacciones por post y tipo. Grano: post_id × tipo_interaccion.
+      Complementa int_post manteniendo la granularidad que int_post colapsa.
+    columns:
+      - name: id_interaccion
+        data_type: varchar
+        description: Clave surrogate generada desde post_id + tipo_interaccion.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: id_post
+        data_type: varchar
+        description: FK hacia int_post.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_post')
+                field: id_post
+
+      - name: id_tipo_interaccion
+        data_type: varchar
+        description: FK hacia int_tipo_interaccion.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_tipo_interaccion')
+                field: id_tipo_interaccion
+
+      - name: total_interaccion
+        data_type: number
+        data_tests:
+          - not_null
+
+  - name: int_metrica_perfil
+    description: >
+      Métricas semanales de perfil. Grano: perfil (username + plataforma) × semana_snapshot.
+      La deduplicación por perfil_id + semana_snapshot viene heredada desde staging.
+    columns:
+      - name: id_metrica_perfil
+        data_type: varchar
+        description: Clave surrogate generada desde username + plataforma + semana_snapshot.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: id_perfil_social
+        data_type: varchar
+        description: FK hacia int_perfil_social. Generada desde username + plataforma.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_perfil_social')
+                field: id_perfil_social
+
+      - name: semana_snapshot
+        data_type: date
+        data_tests:
+          - not_null
+
+      - name: seguidores
+        data_type: number
+        data_tests:
+          - not_null
+
+      - name: alcance_semanal
+        data_type: number
+        data_tests:
+          - not_null
+
+      - name: impresiones_semanales
+        data_type: number
+        data_tests:
+          - not_null
+
+      - name: visitas_perfil
+        data_type: number
+        data_tests:
+          - not_null
+
+      - name: created_at
+        data_type: timestamp_ntz
+        data_tests:
+          - not_null
+
+      - name: updated_at
+        data_type: timestamp_ntz
