@@ -213,3 +213,156 @@ models:
         description: Watermark para la estrategia incremental.
         data_tests:
           - not_null
+
+unit_tests:
+  - name: test_int_post_deduplica_filas_por_post
+    description: >
+      Valida que int_post colapsa correctamente las hasta 4 filas por post
+      (una por tipo_interaccion) conservando únicamente el registro con
+      el updated_at más reciente. El resultado debe tener una sola fila por post_id.
+    model: int_post
+    overrides: 
+      macros:
+        is_incremental: false # Para que el is_incremental sea falso y modelo proceso todo el given
+    given:
+      - input: ref('stg_social_cloud_schema__raw_posts_interacciones')
+        rows:
+          - post_id: "POST_001"
+            raw_json_id: "JSON_001"
+            username: "fcampoy"
+            empresa_id: "EMP_001"
+            plataforma: "Instagram"
+            fecha_publicacion: "2024-02-15 10:00:00"
+            tipo_contenido: "Reel"
+            descripcion_en: "Test post description"
+            patrocinado: false
+            es_campania_bf: false
+            hashtags: "#test #dbt"
+            visualizaciones_post: 1000
+            alcance_post: 800
+            impresiones_post: 1200
+            tipo_interaccion: "Like"
+            cantidad_interaccion: 150
+            engagement_total: 200
+            source_api: "api_v1"
+            created_at: "2024-02-15 10:00:00"
+            updated_at: "2024-03-01 12:00:00"
+            _fivetran_synced: "2024-03-01 12:00:00"
+
+          - post_id: "POST_001"
+            raw_json_id: "JSON_001"
+            username: "fcampoy"
+            empresa_id: "EMP_001"
+            plataforma: "Instagram"
+            fecha_publicacion: "2024-02-15 10:00:00"
+            tipo_contenido: "Reel"
+            descripcion_en: "Test post description"
+            patrocinado: false
+            es_campania_bf: false
+            hashtags: "#test #dbt"
+            visualizaciones_post: 1000
+            alcance_post: 800
+            impresiones_post: 1200
+            tipo_interaccion: "Comentario"
+            cantidad_interaccion: 30
+            engagement_total: 200
+            source_api: "api_v1"
+            created_at: "2024-02-15 10:00:00"
+            updated_at: "2024-02-20 09:00:00"
+            _fivetran_synced: "2024-02-20 09:00:00"
+
+          - post_id: "POST_001"
+            raw_json_id: "JSON_001"
+            username: "fcampoy"
+            empresa_id: "EMP_001"
+            plataforma: "Instagram"
+            fecha_publicacion: "2024-02-15 10:00:00"
+            tipo_contenido: "Reel"
+            descripcion_en: "Test post description"
+            patrocinado: false
+            es_campania_bf: false
+            hashtags: "#test #dbt"
+            visualizaciones_post: 1000
+            alcance_post: 800
+            impresiones_post: 1200
+            tipo_interaccion: "Guardado"
+            cantidad_interaccion: 15
+            engagement_total: 200
+            source_api: "api_v1"
+            created_at: "2024-02-15 10:00:00"
+            updated_at: "2024-02-18 08:00:00"
+            _fivetran_synced: "2024-02-18 08:00:00"
+
+          - post_id: "POST_001"
+            raw_json_id: "JSON_001"
+            username: "fcampoy"
+            empresa_id: "EMP_001"
+            plataforma: "Instagram"
+            fecha_publicacion: "2024-02-15 10:00:00"
+            tipo_contenido: "Reel"
+            descripcion_en: "Test post description"
+            patrocinado: false
+            es_campania_bf: false
+            hashtags: "#test #dbt"
+            visualizaciones_post: 1000
+            alcance_post: 800
+            impresiones_post: 1200
+            tipo_interaccion: "Compartir"
+            cantidad_interaccion: 5
+            engagement_total: 200
+            source_api: "api_v1"
+            created_at: "2024-02-15 10:00:00"
+            updated_at: "2024-02-16 07:00:00"
+            _fivetran_synced: "2024-02-16 07:00:00"
+
+          - post_id: "POST_002"
+            raw_json_id: "JSON_002"
+            username: "zpedrero"
+            empresa_id: "EMP_002"
+            plataforma: "Tiktok"
+            fecha_publicacion: "2024-03-10 15:00:00"
+            tipo_contenido: "Video"
+            descripcion_en: null
+            patrocinado: true
+            es_campania_bf: true
+            hashtags: "#tiktok"
+            visualizaciones_post: 5000
+            alcance_post: 4000
+            impresiones_post: 6000
+            tipo_interaccion: "Like"
+            cantidad_interaccion: 500
+            engagement_total: 500
+            source_api: "api_v2"
+            created_at: "2024-03-10 15:00:00"
+            updated_at: "2024-03-10 15:00:00"
+            _fivetran_synced: "2024-03-10 15:00:00"
+
+    expect:
+      rows:
+        - id_post: "1725c50d6e5751f30b39aad25827d452"
+          codigo_post: "POST_001"
+          raw_json_id: "JSON_001"
+          id_perfil_social: "64998930c5184ca7cc42732516399d4c"
+          id_tipo_contenido: "428ecfdddc3e0489794aa52728819919"
+          id_fuente_ingesta: "75a053c602abf84810fa5c01b1c5fa72"
+          es_campania: false
+          descripcion_en: "Test post description"
+          patrocinado: false
+          visualizaciones: 1000
+          alcance: 800
+          impresiones: 1200
+          engagement_total: 200
+
+        - id_post: "9707d57d9da614f39d4fe8b8dddaa129"
+          codigo_post: "POST_002"
+          raw_json_id: "JSON_002"
+          id_perfil_social: "e32c5751c3d6f2c1c6363d2120ae2551"
+          id_tipo_contenido: "34e2d1989a1dbf75cd631596133ee5ee"
+          id_fuente_ingesta: "6544892c0bb4cc1c43062673871dc95e"
+          es_campania: true
+          descripcion_en: null
+          patrocinado: true
+          visualizaciones: 5000
+          alcance: 4000
+          impresiones: 6000
+          engagement_total: 500
