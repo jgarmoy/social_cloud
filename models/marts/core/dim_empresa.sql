@@ -1,11 +1,11 @@
 with
-    empresa as (select * from {{ ref("snp_empresa") }}),
+    empresa as (select * from {{ ref("int_empresa") }}),
 
     categoria as (select * from {{ ref("int_categoria_empresa") }}),
 
     pais as (select * from {{ ref("int_pais") }}),
 
-    joined as (
+    final (
         select
             e.id_empresa,
             e.codigo_empresa,
@@ -26,4 +26,4 @@ with
     )
 
 select *
-from joined
+from final

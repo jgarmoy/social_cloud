@@ -3,10 +3,8 @@ with
         select * from {{ ref("stg_social_cloud_schema__raw_perfiles_empresas") }}
     ),
 
-    renamed as (
+    renombrar as (
         select
-            {{ dbt_utils.generate_surrogate_key(["username", "plataforma"]) }}
-            as id_perfil_social,
             perfil_id as codigo_perfil_social,
             {{ dbt_utils.generate_surrogate_key(["empresa_id"]) }} as id_empresa,
             {{ dbt_utils.generate_surrogate_key(["plataforma"]) }} as id_red_social,
@@ -19,7 +17,20 @@ with
                 partition by username, plataforma order by created_at desc
             )
             = 1
+    ),
+
+    generar_surrogate_key_perfil_social as (
+        select
+            {{ dbt_utils.generate_surrogate_key(["id_empresa", "id_red_social"]) }}
+            as id_perfil_social,
+            codigo_perfil_social,
+            id_empresa,
+            id_red_social,
+            nombre_usuario,
+            fecha_creacion,
+            activo
+        from renombrar
     )
 
 select *
-from renamed
+from generar_surrogate_key_perfil_social

@@ -29,7 +29,8 @@ models:
     staging:
       +database: "{{ env_var('DBT_ENVIRONMENTS', 'FAIL') }}_SOCIAL_CLOUD_SILVER_DB"
       +schema: staging
-      +materialized: view # En staging se materializa como vistas para que obtenga los datos más frescos posibles (la consulta SQL se ejecuta cada vez zque se consulta la vista). Además, evita desperdiciar espacio en el almacén en modelos que no están pensados para ser consultados por los consumidores de datos (se almacena la lógica, no los datos).
+      +materialized: view 
+      # En staging se materializa como vistas para que obtenga los datos más frescos posibles (la consulta SQL se ejecuta cada vez zque se consulta la vista). Además, evita desperdiciar espacio en el almacén en modelos que no están pensados para ser consultados por los consumidores de datos (se almacena la lógica, no los datos).
     
     intermediate:
       +database: "{{ env_var('DBT_ENVIRONMENTS', 'FAIL') }}_SOCIAL_CLOUD_SILVER_DB"
@@ -44,22 +45,5 @@ models:
 snapshots: 
   social_cloud:
     +transient: false # No quiero que sea transient, porque las transient no tienen time travel.
-    +target_database: "{{ env_var('DBT_ENVIRONMENTS', 'FAIL') }}_SOCIAL_CLOUD_SILVER_DB" # Base de datos donde se materializa
-    +target_schema: snapshots # Schema donde se materializa
-
-# Guardo las filas que fallan en los test en la tabla auditable
-data_tests: 
-  social_cloud:
-    +store_failures: true
-    +severity: error
-    staging:
-      +database: "{{ env_var('DBT_ENVIRONMENTS', 'FAIL') }}_SOCIAL_CLOUD_SILVER_DB"
-      +schema: test_results_staging
-    intermediate: 
-      +database: "{{ env_var('DBT_ENVIRONMENTS', 'FAIL') }}_SOCIAL_CLOUD_SILVER_DB"
-      +schema: test_results_intermediate
-    marts:
-      +database: "{{ env_var('DBT_ENVIRONMENTS', 'FAIL') }}_SOCIAL_CLOUD_GOLD_DB"
-      +schema: test_results_marts
-
-
+    +database: "{{ env_var('DBT_ENVIRONMENTS', 'FAIL') }}_SOCIAL_CLOUD_SILVER_DB" # Base de datos donde se materializa
+    +schema: snapshots # Schema donde se materializa

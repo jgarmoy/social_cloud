@@ -1,7 +1,7 @@
 with
     source as (select * from {{ ref("int_audiencia_demografica") }}),
 
-    renamed as (
+    generar_surrogate_key as (
         select
             -- Explicar que hice esto porque al principio con fecha snapshot tenía
             -- colisiones ya que no eran unicas
@@ -31,4 +31,4 @@ with
     )
 
 select *
-from renamed
+from generar_surrogate_key

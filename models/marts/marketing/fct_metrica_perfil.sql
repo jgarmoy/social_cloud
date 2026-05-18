@@ -1,7 +1,7 @@
 with
     source as (select * from {{ ref("int_metrica_perfil") }}),
 
-    renamed as (
+    renombrar as (
         select
             id_metrica_perfil,
             id_perfil_social,
@@ -23,4 +23,4 @@ with
     )
 
 select *
-from renamed
+from renombrar

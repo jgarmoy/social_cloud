@@ -9,7 +9,7 @@ with
 
     categoria_empresa as (select * from {{ ref('int_categoria_empresa') }}),
 
-    joined as (
+    final as (
         select
             p.id_perfil_social,
             p.codigo_perfil_social,
@@ -35,4 +35,4 @@ with
     )
 
 select *
-from joined
+from final

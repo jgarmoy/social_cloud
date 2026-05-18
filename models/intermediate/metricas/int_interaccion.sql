@@ -15,7 +15,7 @@ with
         {% endif %}
     ),
 
-    renamed as (
+    renombrar as (
         select distinct
             {{ dbt_utils.generate_surrogate_key(["post_id", "tipo_interaccion"]) }}
             as id_interaccion,
@@ -29,4 +29,4 @@ with
     )
 
 select *
-from renamed
+from renombrar

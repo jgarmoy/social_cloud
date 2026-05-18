@@ -1,0 +1,108 @@
+version: 2
+
+models:
+  - name: int_audiencia_demografica
+    description: >
+      Unificación de los tres bloques de audiencia demográfica (TikTok, Instagram, YouTube)
+      en una estructura única y normalizada. La plataforma se infiere desde el handle,
+      no desde la columna platform de la fuente. Se descartan filas sin username,
+      plataforma o fecha_snapshot identificables.
+    columns:
+      - name: empresa_id
+        data_type: varchar
+        data_tests:
+          - not_null
+
+      - name: perfil_id
+        data_type: varchar
+        data_tests:
+          - not_null
+
+      - name: username
+        data_type: varchar
+        description: Coalesce de tk_handle, ig_username, yt_handle.
+        data_tests:
+          - not_null
+
+      - name: plataforma
+        data_type: varchar
+        description: >
+          Inferida desde el handle. Campo nuevo respecto a staging — en staging
+          cada plataforma tenía su propia columna (tk_platform, ig_platform, network).
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["Instagram", "Tiktok", "Youtube"]
+
+      - name: fecha_snapshot
+        data_type: date
+        description: Coalesce de snapshot_date, report_date y period.
+        data_tests:
+          - not_null
+
+      - name: genero
+        data_type: varchar
+        description: Coalesce de gender_segment, audience_gender, genero.
+        data_tests:
+          - not_null
+
+      - name: edad_segmento
+        data_type: varchar
+        description: Coalesce de age_segment, audience_age, edad.
+        data_tests:
+          - not_null
+
+      - name: pais
+        data_type: varchar
+        description: Coalesce de country, audience_country, pais_audiencia.
+        data_tests:
+          - not_null
+
+      - name: porcentaje_audiencia
+        data_type: float
+        description: Coalesce de audience_share_pct, pct_audience, porcentaje.
+        data_tests:
+          - not_null
+
+      - name: seguidores
+        data_type: number
+        description: Coalesce de seg_followers, follower_count_seg, n_seguidores_seg.
+        data_tests:
+          - not_null
+
+      - name: created_at
+        data_type: timestamp_ntz
+        data_tests:
+          - not_null
+
+      - name: updated_at
+        data_type: timestamp_ntz
+
+      - name: _fivetran_synced
+        data_type: timestamp_tz
+        data_tests:
+          - not_null
+
+  - name: int_hashtag_post_separar
+    description: >
+      Modelo auxiliar. Explota la cadena de hashtags de cada post en filas individuales.
+      Filtra NULLs, strings vacíos y tokens vacíos generados por espacios dobles.
+      Normaliza quitando '#' si existe y aplicando lowercase.
+      Paso previo a int_hashtag e int_post_hashtag.
+    columns:
+      - name: post_id
+        data_type: varchar
+        data_tests:
+          - not_null
+
+      - name: plataforma
+        data_type: varchar
+        data_tests:
+          - not_null
+
+      - name: hashtag
+        data_type: varchar
+        description: Hashtag individual sin '#', en lowercase.
+        data_tests:
+          - not_null

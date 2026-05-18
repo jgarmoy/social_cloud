@@ -3,7 +3,7 @@ with
         select * from {{ ref("stg_social_cloud_schema__raw_perfiles_empresas") }}
     ),
 
-    renamed as (
+    renombrar as (
         select
             {{
                 dbt_utils.generate_surrogate_key(
@@ -23,4 +23,4 @@ with
     )
 
 select *
-from renamed
+from renombrar

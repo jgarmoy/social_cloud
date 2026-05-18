@@ -3,7 +3,7 @@ with
         select * from {{ ref("stg_social_cloud_schema__raw_perfiles_empresas") }}
     ),
 
-    renamed as (
+    renombrar_quitar_duplicados as (
         select
             {{ dbt_utils.generate_surrogate_key(["empresa_id"]) }} as id_empresa,
             empresa_id as codigo_empresa,
@@ -17,14 +17,14 @@ with
         qualify
             row_number() over (
                 partition by empresa_id
-                -- Priorizo registros con web y email no nulos
+                -- Priorizo registros con web y email no nulos, sino los que tenga el email, luego la web y después los que son ambos
                 order by
-                    (empresa_web is not null)::int desc,
                     (empresa_email is not null)::int desc,
+                    (empresa_web is not null)::int desc,
                     created_at asc
             )
             = 1
     )
 
 select *
-from renamed
+from renombrar_quitar_duplicados

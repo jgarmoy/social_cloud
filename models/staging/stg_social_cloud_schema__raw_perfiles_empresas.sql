@@ -2,7 +2,7 @@ with
     source as (
         select * from {{ source("social_cloud_schema", "raw_perfiles_empresas") }}
     ),
-    renamed as (
+    renombrar as (
         select
             trim(empresa_id) as empresa_id,
             trim(empresa_nombre) as empresa_nombre,
@@ -43,4 +43,4 @@ with
     )
 
 select *
-from renamed
+from renombrar

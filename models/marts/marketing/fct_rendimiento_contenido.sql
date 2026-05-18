@@ -2,7 +2,7 @@ with
     post as (select * from {{ ref("int_post") }}),
 
     interaccion as (select * from {{ ref("int_interaccion") }}),
-    joined as (
+    final as (
         select
             i.id_interaccion,
             p.id_post,
@@ -29,4 +29,4 @@ with
     )
 
 select *
-from joined
+from final
