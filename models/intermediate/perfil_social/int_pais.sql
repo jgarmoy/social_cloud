@@ -9,9 +9,8 @@ with
 
         union
 
-        select initcap(trim(pais)) as pais
+        select coalesce(initcap(trim(pais)), 'Desconocido') as pais
         from source_audiencia
-        where pais is not null
     ),
 
     generar_surrogate_key as (

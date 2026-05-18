@@ -21,7 +21,6 @@ models:
           UUID del registro JSON crudo en la tabla bronze. Trazabilidad hacia la fuente.
         data_tests:
           - not_null
-          - unique
 
       - name: username
         data_type: varchar

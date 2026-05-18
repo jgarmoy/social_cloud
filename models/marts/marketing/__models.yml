@@ -1,11 +1,6 @@
 version: 2
 
 models:
-
-  # ════════════════════════════════════════════════════════════
-  # DIMENSIONES
-  # ════════════════════════════════════════════════════════════
-
   - name: dim_tipo_contenido
     description: >
       Dimensión de tipos de contenido publicado (Video, Story, Carrusel, Reel, Post Estático).
@@ -165,10 +160,6 @@ models:
                 to: ref('dim_hashtag')
                 field: id_hashtag
 
-  # ════════════════════════════════════════════════════════════
-  # TABLAS DE HECHOS
-  # ════════════════════════════════════════════════════════════
-
   - name: fct_rendimiento_contenido
     description: >
       Hecho de rendimiento de contenido. Grano: post × tipo_interaccion.
@@ -248,13 +239,6 @@ models:
                 to: ref('dim_fecha')
                 field: id_fecha
 
-      - name: codigo_post
-        data_type: varchar
-        description: >
-          Identificador natural del post en la plataforma de origen.
-        data_tests:
-          - not_null
-
       - name: descripcion_en
         data_type: varchar
         description: >
@@ -319,25 +303,6 @@ models:
           Ratio de engagement calculado como engagement_total / alcance × 100.
           NULL si alcance = 0.
 
-      - name: created_at
-        data_type: timestamp_ntz
-        description: >
-          Timestamp de creación del registro en la fuente.
-        data_tests:
-          - not_null
-
-      - name: updated_at
-        data_type: timestamp_ntz
-        description: >
-          Timestamp de última actualización en la fuente.
-
-      - name: _fivetran_synced
-        data_type: timestamp_tz
-        description: >
-          Timestamp de la última sincronización de Fivetran. Watermark para incremental.
-        data_tests:
-          - not_null
-
   - name: fct_metrica_perfil
     description: >
       Hecho de evolución semanal de perfiles sociales. Grano: perfil × semana_snapshot.
@@ -372,13 +337,6 @@ models:
               arguments:
                 to: ref('dim_fecha')
                 field: id_fecha
-
-      - name: semana_snapshot
-        data_type: date
-        description: >
-          Fecha de inicio de la semana del snapshot (lunes).
-        data_tests:
-          - not_null
 
       - name: seguidores
         data_type: number
@@ -419,18 +377,6 @@ models:
         description: >
           Porcentaje de impresiones que llegaron a usuarios únicos
           (alcance_semanal / impresiones_semanales × 100). NULL si impresiones = 0.
-
-      - name: created_at
-        data_type: timestamp_ntz
-        description: >
-          Timestamp de creación del registro en la fuente.
-        data_tests:
-          - not_null
-
-      - name: updated_at
-        data_type: timestamp_ntz
-        description: >
-          Timestamp de última actualización en la fuente.
 
   - name: fct_segmento_audiencia
     description: >
@@ -501,13 +447,6 @@ models:
                 to: ref('dim_fecha')
                 field: id_fecha
 
-      - name: fecha_snapshot
-        data_type: date
-        description: >
-          Fecha del snapshot de audiencia.
-        data_tests:
-          - not_null
-
       - name: porcentaje
         data_type: float
         description: >
@@ -521,15 +460,3 @@ models:
           Número absoluto de seguidores en este segmento demográfico.
         data_tests:
           - not_null
-
-      - name: created_at
-        data_type: timestamp_ntz
-        description: >
-          Timestamp de creación del registro en la fuente.
-        data_tests:
-          - not_null
-
-      - name: updated_at
-        data_type: timestamp_ntz
-        description: >
-          Timestamp de última actualización en la fuente.

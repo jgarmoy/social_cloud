@@ -8,7 +8,6 @@ snapshots:
       Captura variaciones en el estado del perfil: activaciones, desactivaciones,
       cambios de nombre de usuario y reasignaciones de empresa.
       La clave única es codigo_perfil_social (perfil_id en staging).
-      Alimenta dim_perfil_social en gold — filtrar es_vigente = true para vista actual.
     config:
       target_schema: snapshots
       unique_key: codigo_perfil_social

@@ -13,7 +13,7 @@ with
                         "genero",
                         "edad_segmento",
                         "pais",
-                        "fecha_snapshot",
+                        "fecha_snapshot"
                     ]
                 )
             }} as id_audiencia,

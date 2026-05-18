@@ -19,7 +19,7 @@ with
             coalesce(snapshot_date, report_date, period) as fecha_snapshot,
             coalesce(gender_segment, audience_gender, genero) as genero,
             coalesce(age_segment, audience_age, edad) as edad_segmento,
-            coalesce(country, audience_country, pais_audiencia) as pais,
+            coalesce(country, audience_country, pais_audiencia, 'Desconocido') as pais,
             coalesce(
                 audience_share_pct, pct_audience, porcentaje
             ) as porcentaje_audiencia,
@@ -38,6 +38,15 @@ with
             username is not null
             and plataforma is not null
             and fecha_snapshot is not null
+        qualify
+            row_number() over (
+                partition by
+                    username, plataforma, genero, edad_segmento, pais, fecha_snapshot
+                order by
+                    (pais is not null)::int desc,
+                    _fivetran_synced desc
+            )
+            = 1
     )
 
 select *

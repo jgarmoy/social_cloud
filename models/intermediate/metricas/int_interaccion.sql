@@ -22,7 +22,9 @@ with
             {{ dbt_utils.generate_surrogate_key(["post_id"]) }} as id_post,
             {{ dbt_utils.generate_surrogate_key(["tipo_interaccion"]) }}
             as id_tipo_interaccion,
-            cantidad_interaccion as total_interaccion
+            cantidad_interaccion as total_interaccion,
+            created_at,
+            updated_at
         from source
     )
 
