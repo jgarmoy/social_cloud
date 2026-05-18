@@ -115,51 +115,6 @@ models:
         description: >
           Límite superior del rango. NULL intencional para el rango 55+.
 
-  - name: dim_hashtag
-    description: >
-      Dimensión de hashtags únicos extraídos de los posts. Sin '#', en lowercase.
-    columns:
-      - name: id_hashtag
-        data_type: varchar
-        description: >
-          Surrogate key generada desde el valor del hashtag.
-        data_tests:
-          - not_null
-          - unique
-
-      - name: hashtag
-        data_type: varchar
-        description: >
-          Hashtag individual sin '#' y en lowercase.
-        data_tests:
-          - not_null
-          - unique
-
-  - name: bridge_post_hashtag
-    description: >
-      Tabla puente entre fct_rendimiento_contenido y dim_hashtag.
-      Patrón de uso: fct_rendimiento_contenido → bridge_post_hashtag → dim_hashtag.
-      Al hacer el join tener en cuenta que multiplica las filas del fact
-      por el número de hashtags del post.
-    columns:
-      - name: id_post
-        data_type: varchar
-        description: >
-          FK hacia fct_rendimiento_contenido.
-        data_tests:
-          - not_null
-
-      - name: id_hashtag
-        data_type: varchar
-        description: >
-          FK hacia dim_hashtag.
-        data_tests:
-          - not_null
-          - relationships:
-              arguments:
-                to: ref('dim_hashtag')
-                field: id_hashtag
-
   - name: fct_rendimiento_contenido
     description: >
       Hecho de rendimiento de contenido. Grano: post × tipo_interaccion.
