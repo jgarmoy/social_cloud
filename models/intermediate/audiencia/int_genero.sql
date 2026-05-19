@@ -6,7 +6,6 @@ with
             {{ dbt_utils.generate_surrogate_key(["genero"]) }} as id_genero,
             genero as nombre
         from source
-        where genero is not null
     )
 
 select *

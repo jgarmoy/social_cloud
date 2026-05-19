@@ -5,8 +5,7 @@ with
 
     renombrar_generar_surrogate_key_perfil_social as (
         select
-            {{ dbt_utils.generate_surrogate_key(["perfil_id"]) }}
-            as id_perfil_social,
+            {{ dbt_utils.generate_surrogate_key(["perfil_id"]) }} as id_perfil_social,
             perfil_id as codigo_perfil_social,
             {{ dbt_utils.generate_surrogate_key(["empresa_id"]) }} as id_empresa,
             {{ dbt_utils.generate_surrogate_key(["plataforma"]) }} as id_red_social,

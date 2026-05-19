@@ -10,7 +10,7 @@ sources:
       - name: raw_audiencia_demografica
         description: >
           Snapshots de segmentación de audiencia (género, edad, país) por perfil y plataforma.
-        config: 
+        config:
           freshness:
             warn_after: { count: 8, period: day }
             error_after: { count: 15, period: day }
@@ -80,7 +80,7 @@ sources:
       - name: raw_perfiles_empresas
         description: >
           Snapshot semanal de perfiles de empresa por plataforma con métricas de alcance.
-        config: 
+        config:
           freshness:
             warn_after: { count: 8, period: day }
             error_after: { count: 15, period: day }
@@ -130,7 +130,7 @@ sources:
       - name: raw_posts_interacciones
         description: >
           Registro crudo de posts y sus interacciones por tipo (like, comentario, guardado, compartir).
-        config: 
+        config:
           freshness:
             warn_after: { count: 24, period: hour }
             error_after: { count: 48, period: hour }

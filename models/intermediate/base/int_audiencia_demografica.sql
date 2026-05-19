@@ -17,7 +17,7 @@ with
                 then 'Youtube'
             end as plataforma,
             coalesce(snapshot_date, report_date, period) as fecha_snapshot,
-            coalesce(gender_segment, audience_gender, genero) as genero,
+            coalesce(gender_segment, audience_gender, genero, 'Desconocido') as genero,
             coalesce(age_segment, audience_age, edad) as edad_segmento,
             coalesce(country, audience_country, pais_audiencia, 'Desconocido') as pais,
             coalesce(
@@ -42,9 +42,7 @@ with
             row_number() over (
                 partition by
                     username, plataforma, genero, edad_segmento, pais, fecha_snapshot
-                order by
-                    (pais is not null)::int desc,
-                    _fivetran_synced desc
+                order by (pais is not null)::int desc, _fivetran_synced desc
             )
             = 1
     )

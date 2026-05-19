@@ -144,7 +144,7 @@ models:
       - name: source_api
         data_type: varchar
         description: >
-          Origen de la ingesta del dato (api_v1, api_v2, manual_export).
+          Origen de la ingesta del dato (api_v1, api_v2, manual_export). Normalizado a minúsculas.
         data_tests:
           - not_null
           - accepted_values:
@@ -379,12 +379,8 @@ models:
       - name: tk_platform
         data_type: varchar
         description: >
-          Plataforma fija 'Tiktok' cuando tk_handle está poblado, NULL en caso contrario.
-          Nota: en el modelo se transforma el IS NOT NULL de la fuente a literal 'Tiktok'.
-        data_tests:
-          - accepted_values:
-              arguments:
-                values: ["Tiktok"]
+          Literal 'Tiktok' cuando tk_handle está poblado, NULL en caso contrario.
+          El SQL fuerza siempre este literal, por lo que no requiere accepted_values.
 
       - name: snapshot_date
         data_type: date
@@ -395,34 +391,30 @@ models:
         data_type: varchar
         description: >
           Segmento de género de audiencia TikTok (Hombre, Mujer, No Binario).
-        data_tests:
-          - accepted_values:
-              arguments:
-                values: ["Hombre", "Mujer", "No Binario"]
+          Nulo para registros de Instagram o YouTube.
 
       - name: age_segment
         data_type: varchar
         description: >
           Rango de edad de la audiencia TikTok (18-24, 25-34, 35-44, 45-54, 55+).
-        data_tests:
-          - accepted_values:
-              arguments:
-                values: ["18-24", "25-34", "35-44", "45-54", "55+"]
+          Nulo para registros de Instagram o YouTube.
 
       - name: country
         data_type: varchar
         description: >
-          País del segmento de audiencia TikTok.
+          País del segmento de audiencia TikTok. Nulo para otras plataformas.
 
       - name: audience_share_pct
         data_type: float
         description: >
           Porcentaje de la audiencia TikTok que corresponde a este segmento (0-100).
+          Nulo para otras plataformas.
 
       - name: seg_followers
         data_type: number
         description: >
           Número absoluto de seguidores TikTok en este segmento demográfico.
+          Nulo para otras plataformas.
 
       - name: ig_username
         data_type: varchar
@@ -432,11 +424,8 @@ models:
       - name: ig_platform
         data_type: varchar
         description: >
-          Plataforma fija 'Instagram' cuando ig_username está poblado, NULL en caso contrario.
-        data_tests:
-          - accepted_values:
-              arguments:
-                values: ["Instagram"]
+          Literal 'Instagram' cuando ig_username está poblado, NULL en caso contrario.
+          El SQL fuerza siempre este literal, por lo que no requiere accepted_values.
 
       - name: report_date
         data_type: date
@@ -446,27 +435,29 @@ models:
       - name: audience_gender
         data_type: varchar
         description: >
-          Segmento de género de audiencia Instagram.
+          Segmento de género de audiencia Instagram. Nulo para otras plataformas.
 
       - name: audience_age
         data_type: varchar
         description: >
-          Rango de edad de la audiencia Instagram.
+          Rango de edad de la audiencia Instagram. Nulo para otras plataformas.
 
       - name: audience_country
         data_type: varchar
         description: >
-          País del segmento de audiencia Instagram.
+          País del segmento de audiencia Instagram. Nulo para otras plataformas.
 
       - name: pct_audience
         data_type: float
         description: >
           Porcentaje de audiencia Instagram en este segmento (0-100).
+          Nulo para otras plataformas.
 
       - name: follower_count_seg
         data_type: number
         description: >
           Número absoluto de seguidores Instagram en este segmento.
+          Nulo para otras plataformas.
 
       - name: yt_handle
         data_type: varchar
@@ -476,11 +467,8 @@ models:
       - name: network
         data_type: varchar
         description: >
-          Plataforma fija 'Youtube' cuando yt_handle está poblado, NULL en caso contrario.
-        data_tests:
-          - accepted_values:
-              arguments:
-                values: ["Youtube"]
+          Literal 'Youtube' cuando yt_handle está poblado, NULL en caso contrario.
+          El SQL fuerza siempre este literal, por lo que no requiere accepted_values.
 
       - name: period
         data_type: date
@@ -490,29 +478,31 @@ models:
       - name: genero
         data_type: varchar
         description: >
-          Segmento de género de audiencia YouTube (campo renombrado desde sexo).
+          Segmento de género de audiencia YouTube (renombrado desde sexo en la fuente).
+          Nulo para otras plataformas.
 
       - name: edad
         data_type: varchar
         description: >
-          Rango de edad de la audiencia YouTube.
+          Rango de edad de la audiencia YouTube. Nulo para otras plataformas.
 
       - name: pais_audiencia
         data_type: varchar
         description: >
-          País del segmento de audiencia YouTube.
+          País del segmento de audiencia YouTube. Nulo para otras plataformas.
 
       - name: porcentaje
         data_type: float
         description: >
           Porcentaje de audiencia YouTube en este segmento (0-100).
+          Nulo para otras plataformas.
 
       - name: n_seguidores_seg
         data_type: number
         description: >
           Número absoluto de suscriptores YouTube en este segmento.
+          Nulo para otras plataformas.
 
-      # ── Metadatos ──────────────────────────────
       - name: created_at
         data_type: timestamp_ntz
         description: >
@@ -529,6 +519,73 @@ models:
         data_type: number
         description: >
           Número de línea del archivo fuente. Metadato de Fivetran.
+
+      - name: _fivetran_synced
+        data_type: timestamp_tz
+        description: >
+          Timestamp de la última sincronización de Fivetran. Usado para freshness.
+        data_tests:
+          - not_null
+
+  - name: stg_social_cloud_schema_modificar_perfil__raw_modificar_perfil
+    description: >
+      Staging del catálogo de perfiles sociales gestionados internamente. Recoge los
+      identificadores de perfil, empresa y red social, junto con el nombre de usuario
+      y la fecha de creación. Sin transformaciones adicionales: la fuente ya viene
+      limpia desde el sistema de gestión de perfiles.
+    columns:
+      - name: id_perfil_social
+        data_type: varchar
+        description: >
+          Identificador único del perfil social en el sistema interno. PK del modelo.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: codigo_perfil_social
+        data_type: varchar
+        description: >
+          Código alfanumérico alternativo del perfil social. Puede ser nulo.
+
+      - name: id_empresa
+        data_type: varchar
+        description: >
+          Identificador de la empresa propietaria del perfil. FK hacia
+          stg_social_cloud_schema__raw_perfiles_empresas.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_social_cloud_schema__raw_perfiles_empresas')
+                field: empresa_id
+
+      - name: id_red_social
+        data_type: varchar
+        description: >
+          Identificador de la red social asociada al perfil.
+        data_tests:
+          - not_null
+
+      - name: nombre_usuario
+        data_type: varchar
+        description: >
+          Nombre de usuario del perfil en la red social.
+        data_tests:
+          - not_null
+
+      - name: fecha_creacion
+        data_type: date
+        description: >
+          Fecha de creación del perfil en el sistema interno.
+        data_tests:
+          - not_null
+
+      - name: activo
+        data_type: boolean
+        description: >
+          Indica si el perfil está activo en el sistema interno.
+        data_tests:
+          - not_null
 
       - name: _fivetran_synced
         data_type: timestamp_tz

@@ -13,12 +13,11 @@ with
                         "genero",
                         "edad_segmento",
                         "pais",
-                        "fecha_snapshot"
+                        "fecha_snapshot",
                     ]
                 )
             }} as id_audiencia,
-            {{ dbt_utils.generate_surrogate_key(["perfil_id"]) }}
-            as id_perfil_social,
+            {{ dbt_utils.generate_surrogate_key(["perfil_id"]) }} as id_perfil_social,
             {{ dbt_utils.generate_surrogate_key(["genero"]) }} as id_genero,
             {{ dbt_utils.generate_surrogate_key(["edad_segmento"]) }} as id_rango_edad,
             {{ dbt_utils.generate_surrogate_key(["pais"]) }} as id_pais,

@@ -17,7 +17,8 @@ with
         qualify
             row_number() over (
                 partition by empresa_id
-                -- Priorizo registros con web y email no nulos, sino los que tenga el email, luego la web y después los que son ambos
+                -- Priorizo registros con web y email no nulos, sino los que tenga el
+                -- email, luego la web y después los que son ambos
                 order by
                     (empresa_email is not null)::int desc,
                     (empresa_web is not null)::int desc,

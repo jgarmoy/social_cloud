@@ -1,27 +1,24 @@
 {{
     config(
         materialized="incremental",
-        incremental_strategy="append",
+        incremental_strategy="merge",
+        unique_key="codigo_post",
         on_schema_change="append_new_columns",
     )
 }}
 
 with
     source_posts as (
-        select *
-        from {{ ref("stg_social_cloud_schema__raw_posts_interacciones") }}
-        {% if is_incremental() %}
-            where _fivetran_synced > (select max(_fivetran_synced) from {{ this }})
-        {% endif %}
+        select * from {{ ref("stg_social_cloud_schema__raw_posts_interacciones") }}
     ),
     source_perfil_social as (select * from {{ ref("snp_perfil_social") }}),
-
     renombrar as (
         select
             {{ dbt_utils.generate_surrogate_key(["p.post_id"]) }} as id_post,
             p.post_id as codigo_post,
             p.raw_json_id,
             ps.id_perfil_social,
+            p.empresa_id as id_empresa,
             {{ dbt_utils.generate_surrogate_key(["p.tipo_contenido"]) }}
             as id_tipo_contenido,
             {{ dbt_utils.generate_surrogate_key(["p.source_api"]) }}
@@ -39,11 +36,16 @@ with
         left join
             source_perfil_social ps
             on p.username = ps.nombre_usuario
-            and p.fecha_publicacion >= ps.dbt_valid_from
-            and (ps.dbt_valid_to is null or p.fecha_publicacion < ps.dbt_valid_to)
+            and ps.dbt_valid_to is null
+    ),
+
+    deduplicado as (  -- En caso de que entren varias filas por error
+        select *
+        from renombrar
         qualify
-            row_number() over (partition by p.post_id order by p.updated_at desc) = 1
+            row_number() over (partition by codigo_post order by _fivetran_synced desc)
+            = 1
     )
 
 select *
-from renombrar
+from deduplicado
