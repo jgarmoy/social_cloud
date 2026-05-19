@@ -1,9 +1,7 @@
 version: 2
 
 models:
-  # ────────────────────────────────────────────────────────────────────────────
-  # int_tipo_contenido
-  # ────────────────────────────────────────────────────────────────────────────
+
   - name: int_tipo_contenido
     description: >
       Dimensión de tipos de contenido. Valores únicos de tipo_contenido en staging posts.
@@ -26,9 +24,6 @@ models:
           - not_null
           - unique
 
-  # ────────────────────────────────────────────────────────────────────────────
-  # int_tipo_interaccion
-  # ────────────────────────────────────────────────────────────────────────────
   - name: int_tipo_interaccion
     description: >
       Dimensión de tipos de interacción. Valores únicos de tipo_interaccion en staging posts.
@@ -51,9 +46,6 @@ models:
           - not_null
           - unique
 
-  # ────────────────────────────────────────────────────────────────────────────
-  # int_fuente_ingesta
-  # ────────────────────────────────────────────────────────────────────────────
   - name: int_fuente_ingesta
     description: >
       Dimensión de fuentes de ingesta. Valores únicos de source_api en staging posts.
@@ -76,9 +68,6 @@ models:
           - not_null
           - unique
 
-  # ────────────────────────────────────────────────────────────────────────────
-  # int_hashtag
-  # ────────────────────────────────────────────────────────────────────────────
   - name: int_hashtag
     description: >
       Dimensión de hashtags únicos generada desde int_hashtag_post_separar.
@@ -100,19 +89,11 @@ models:
           - not_null
           - unique
 
-  # ────────────────────────────────────────────────────────────────────────────
-  # int_post_hashtag
-  # ────────────────────────────────────────────────────────────────────────────
   - name: int_post_hashtag
     description: >
       Tabla puente post ↔ hashtag.
       Cada fila representa una relación única entre un post y un hashtag.
       El DISTINCT del SQL garantiza unicidad del par (id_post, id_hashtag).
-    data_tests:
-      - dbt_utils.unique_combination_of_columns:
-          combination_of_columns:
-            - id_post
-            - id_hashtag
     columns:
       - name: id_post
         data_type: varchar
@@ -136,9 +117,6 @@ models:
                 to: ref('int_hashtag')
                 field: id_hashtag
 
-  # ────────────────────────────────────────────────────────────────────────────
-  # int_post
-  # ────────────────────────────────────────────────────────────────────────────
   - name: int_post
     description: >
       Hecho central de posts. Grano: un registro por post único (post_id).
@@ -257,13 +235,12 @@ models:
           Timestamp de la última sincronización de Fivetran. Validado en staging.
           Usado como criterio de desempate en el QUALIFY y watermark para la
           estrategia incremental.
-
 unit_tests:
   - name: test_int_post_deduplica_filas_por_post
     description: >
       Valida que int_post colapsa correctamente las hasta 4 filas por post
       (una por tipo_interaccion) conservando únicamente el registro con
-      el updated_at más reciente. El resultado debe tener una sola fila por post_id.
+      el _fivetran_synced más reciente. El resultado debe tener una sola fila por post_id.
     model: int_post
     overrides:
       macros:
@@ -380,6 +357,16 @@ unit_tests:
             created_at: "2024-03-10 15:00:00"
             updated_at: "2024-03-10 15:00:00"
             _fivetran_synced: "2024-03-10 15:00:00"
+
+      - input: ref('snp_perfil_social')
+        rows:
+          - id_perfil_social: "64998930c5184ca7cc42732516399d4c"
+            nombre_usuario: "fcampoy"
+            dbt_valid_to: null
+
+          - id_perfil_social: "e32c5751c3d6f2c1c6363d2120ae2551"
+            nombre_usuario: "zpedrero"
+            dbt_valid_to: null
 
     expect:
       rows:

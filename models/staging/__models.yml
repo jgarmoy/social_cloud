@@ -556,8 +556,8 @@ models:
           - not_null
           - relationships:
               arguments:
-                to: ref('stg_social_cloud_schema__raw_perfiles_empresas')
-                field: empresa_id
+                to: ref('int_empresa')
+                field: id_empresa
 
       - name: id_red_social
         data_type: varchar
