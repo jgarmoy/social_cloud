@@ -1,0 +1,149 @@
+version: 2
+
+models:
+  - name: int_genero
+    description: >
+      Dimensión de géneros de audiencia. Valores únicos unificados entre TikTok,
+      Instagram y YouTube desde int_audiencia_demografica.
+    columns:
+      - name: id_genero
+        data_type: varchar
+        description: >
+          Clave surrogate generada desde el valor normalizado de genero.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: nombre
+        data_type: varchar
+        description: >
+          Nombre del género tal como viene normalizado desde int_audiencia_demografica.
+        data_tests:
+          - not_null
+          - unique
+
+  - name: int_rango_edad
+    description: >
+      Dimensión de rangos de edad con límites numéricos edad_min y edad_max
+      para facilitar filtros y ordenaciones en gold. edad_max es NULL para 55+.
+      edad_min es NULL cuando edad_segmento es NULL o tiene formato inesperado
+      (se mapea a rango_edad = 'Desconocido').
+    columns:
+      - name: id_rango_edad
+        data_type: varchar
+        description: >
+          Clave surrogate generada desde edad_segmento. NULL en la fuente produce
+          un surrogate de NULL; rango_edad lo cubre con 'Desconocido'.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: rango_edad
+        data_type: varchar
+        description: >
+          Rango de edad legible. 'Desconocido' cuando edad_segmento es NULL en la fuente.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: edad_min
+        data_type: number
+        description: >
+          Límite inferior del rango, parseado desde rango_edad. NULL para 'Desconocido'.
+          No se testea not_null porque el valor 'Desconocido' lo deja intencionalmente NULL.
+
+      - name: edad_max
+        data_type: number
+        description: >
+          Límite superior del rango, parseado desde rango_edad.
+          NULL intencional para el rango 55+ y para 'Desconocido'.
+
+  - name: int_audiencia
+    description: >
+      Hecho de audiencia demográfica con claves surrogate.
+      Grano: perfil × plataforma × género × edad × país × fecha_snapshot.
+    columns:
+      - name: id_audiencia
+        data_type: varchar
+        description: >
+          Clave surrogate generada desde username, plataforma, genero,
+          edad_segmento, pais y fecha_snapshot para garantizar unicidad de grano.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: id_perfil_social
+        data_type: varchar
+        description: >
+          Clave surrogate del perfil social. Generada desde perfil_id. FK hacia int_perfil_social.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_perfil_social')
+                field: id_perfil_social
+
+      - name: id_genero
+        data_type: varchar
+        description: >
+          Clave surrogate del género. Generada desde genero. FK hacia int_genero.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_genero')
+                field: id_genero
+
+      - name: id_rango_edad
+        data_type: varchar
+        description: >
+          Clave surrogate del rango de edad. Generada desde edad_segmento. FK hacia int_rango_edad.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_rango_edad')
+                field: id_rango_edad
+
+      - name: id_pais
+        data_type: varchar
+        description: >
+          Clave surrogate del país. Generada desde pais. FK hacia int_pais.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_pais')
+                field: id_pais
+
+      - name: fecha_snapshot
+        data_type: date
+        description: >
+          Fecha del snapshot demográfico. Heredada desde int_audiencia_demografica.
+        data_tests:
+          - not_null
+
+      - name: porcentaje
+        data_type: float
+        description: >
+          Porcentaje de audiencia que corresponde a este segmento demográfico (0-100).
+          Renombrado desde porcentaje_audiencia en int_audiencia_demografica.
+        data_tests:
+          - not_null
+
+      - name: seguidores
+        data_type: number
+        description: >
+          Número absoluto de seguidores en este segmento demográfico.
+        data_tests:
+          - not_null
+
+      - name: created_at
+        data_type: timestamp_ntz
+        description: >
+          Timestamp de creación del registro en la fuente original. Validado en staging.
+
+      - name: updated_at
+        data_type: timestamp_ntz
+        description: >
+          Timestamp de última actualización en la fuente. Puede ser nulo si no hubo modificaciones.

@@ -1,0 +1,85 @@
+version: 2
+
+snapshots:
+  - name: snp_perfil_social
+    description: >
+      Historial de cambios de perfiles sociales (SCD Type 2).
+      Captura variaciones en el estado del perfil: activaciones, desactivaciones,
+      cambios de nombre de usuario y reasignaciones de empresa.
+      La clave única del snapshot es codigo_perfil_social (perfil_id en staging).
+      Combina int_perfil_social con stg_modificar_perfil via UNION ALL,
+      conservando el registro más reciente por codigo_perfil_social antes de la
+      evaluación del snapshot.
+    config:
+      target_schema: snapshots
+      unique_key: codigo_perfil_social
+      strategy: timestamp
+      updated_at: _fivetran_synced
+      invalidate_hard_deletes: true
+    columns:
+      - name: id_perfil_social
+        data_type: varchar
+        description: >
+          Clave surrogate generada desde perfil_id en int_perfil_social.
+
+      - name: codigo_perfil_social
+        data_type: varchar
+        description: >
+          Clave natural del perfil (perfil_id en staging). Clave única del snapshot.
+        data_tests:
+          - not_null
+
+      - name: id_empresa
+        data_type: varchar
+        description: >
+          Clave surrogate de la empresa. Monitorizado para detectar reasignaciones de empresa.
+
+      - name: id_red_social
+        data_type: varchar
+        description: >
+          Clave surrogate de la red social. Monitorizado para detectar cambios de plataforma.
+
+      - name: nombre_usuario
+        data_type: varchar
+        description: >
+          Handle del perfil en la plataforma. Monitorizado para detectar cambios de nombre de usuario.
+
+      - name: fecha_creacion
+        data_type: date
+        description: >
+          Fecha de creación del perfil en la plataforma. Campo estable; no genera nuevas versiones.
+
+      - name: activo
+        data_type: boolean
+        description: >
+          Estado del perfil. Un cambio a false genera una nueva versión en el snapshot.
+
+      - name: _fivetran_synced
+        data_type: timestamp_tz
+        description: >
+          Timestamp de la última sincronización de Fivetran. Usado como updated_at
+          para la estrategia timestamp del snapshot.
+
+      - name: dbt_scd_id
+        data_type: varchar
+        description: >
+          Identificador único de cada versión del registro. Generado por dbt.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: dbt_updated_at
+        data_type: timestamp_ntz
+        description: >
+          Timestamp en que dbt detectó el cambio que generó esta versión del registro.
+
+      - name: dbt_valid_from
+        data_type: timestamp_ntz
+        description: >
+          Inicio del período de validez de esta versión del registro.
+
+      - name: dbt_valid_to
+        data_type: timestamp_ntz
+        description: >
+          Fin del período de validez. NULL indica que es el registro vigente.
+          dim_perfil_social filtra por dbt_valid_to is null para exponer solo el estado actual.

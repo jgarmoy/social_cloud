@@ -2,14 +2,24 @@ version: 2
 
 sources:
   - name: social_cloud_schema
-    database: social_cloud_bronze_db
+    database: "{{ env_var('DBT_ENVIRONMENTS', 'FAIL') }}_social_cloud_bronze_db"
+    description: >
+      Capa bronze de Social Cloud. Datos crudos ingestados via Fivetran desde las APIs
+      de Instagram, TikTok y YouTube.
     tables:
       - name: raw_audiencia_demografica
+        description: >
+          Snapshots de segmentación de audiencia (género, edad, país) por perfil y plataforma.
+        config:
+          freshness:
+            warn_after: { count: 8, period: day }
+            error_after: { count: 15, period: day }
+          loaded_at_field: _fivetran_synced
         columns:
           - name: _line
             data_type: number
           - name: _fivetran_synced
-            data_type: timestamp_tz 
+            data_type: timestamp_tz
           - name: tk_handle
             data_type: varchar
           - name: tk_platform
@@ -25,7 +35,7 @@ sources:
           - name: audience_share_pct
             data_type: float
           - name: seg_followers
-            data_type: float
+            data_type: number
           - name: ig_username
             data_type: varchar
           - name: ig_platform
@@ -41,7 +51,7 @@ sources:
           - name: pct_audience
             data_type: float
           - name: follower_count_seg
-            data_type: float
+            data_type: number
           - name: yt_handle
             data_type: varchar
           - name: network
@@ -57,7 +67,7 @@ sources:
           - name: porcentaje
             data_type: float
           - name: n_seguidores_seg
-            data_type: float
+            data_type: number
           - name: empresa_id
             data_type: varchar
           - name: perfil_id
@@ -68,6 +78,13 @@ sources:
             data_type: timestamp_ntz
 
       - name: raw_perfiles_empresas
+        description: >
+          Snapshot semanal de perfiles de empresa por plataforma con métricas de alcance.
+        config:
+          freshness:
+            warn_after: { count: 8, period: day }
+            error_after: { count: 15, period: day }
+          loaded_at_field: _fivetran_synced
         columns:
           - name: _line
             data_type: number
@@ -111,6 +128,13 @@ sources:
             data_type: timestamp_ntz
 
       - name: raw_posts_interacciones
+        description: >
+          Registro crudo de posts y sus interacciones por tipo (like, comentario, guardado, compartir).
+        config:
+          freshness:
+            warn_after: { count: 24, period: hour }
+            error_after: { count: 48, period: hour }
+          loaded_at_field: _fivetran_synced
         columns:
           - name: _line
             data_type: number
@@ -156,3 +180,27 @@ sources:
             data_type: timestamp_ntz
           - name: updated_at
             data_type: timestamp_ntz
+
+  - name: social_cloud_schema_modificar_perfil
+    database: "{{ env_var('DBT_ENVIRONMENTS', 'FAIL') }}_social_cloud_bronze_db"
+    tables:
+      - name: raw_modificar_perfil_social
+        columns:
+          - name: _line
+            data_type: number
+          - name: _fivetran_synced
+            data_type: timestamp_tz
+          - name: id_perfil_social
+            data_type: varchar
+          - name: codigo_perfil_social
+            data_type: varchar
+          - name: id_empresa
+            data_type: varchar
+          - name: id_red_social
+            data_type: varchar
+          - name: nombre_usuario
+            data_type: varchar
+          - name: fecha_creacion
+            data_type: date
+          - name: activo
+            data_type: boolean

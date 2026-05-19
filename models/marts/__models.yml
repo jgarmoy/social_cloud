@@ -1,0 +1,642 @@
+version: 2
+
+models:
+
+  - name: dim_fecha
+    description: >
+      Dimensión de tiempo. Generada con dbt_utils.date_spine desde 2024-01-01 hasta 2025-12-31.
+      Grano: un registro por día. id_fecha es un entero YYYYMMDD usado como FK en las facts.
+    columns:
+      - name: id_fecha
+        data_type: int
+        description: >
+          PK en formato YYYYMMDD. FK en todas las tablas de hechos.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: fecha
+        data_type: date
+        description: >
+          Fecha en formato date. Equivalente natural de id_fecha.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: anio
+        data_type: int
+        description: >
+          Año natural extraído de fecha.
+        data_tests:
+          - not_null
+
+      - name: mes
+        data_type: int
+        description: >
+          Número de mes (1-12) extraído de fecha.
+        data_tests:
+          - not_null
+
+      - name: desc_mes
+        data_type: varchar
+        description: >
+          Nombre del mes en español (Enero, Febrero, ..., Diciembre).
+        data_tests:
+          - not_null
+
+      - name: dia
+        data_type: int
+        description: >
+          Día del mes extraído de fecha.
+        data_tests:
+          - not_null
+
+      - name: dia_semana
+        data_type: int
+        description: >
+          Número de día de la semana (0 = Domingo, 6 = Sábado).
+        data_tests:
+          - not_null
+
+      - name: desc_dia_semana
+        data_type: varchar
+        description: >
+          Nombre del día de la semana en español (Lunes, Martes, ..., Domingo).
+        data_tests:
+          - not_null
+
+      - name: trimestre
+        data_type: int
+        description: >
+          Trimestre del año (1-4) extraído de fecha.
+        data_tests:
+          - not_null
+
+      - name: es_fin_de_semana
+        data_type: boolean
+        description: >
+          True si el día es sábado o domingo.
+        data_tests:
+          - not_null
+
+  - name: dim_pais
+    description: >
+      Dimensión de países. Cubre tanto países de empresa como países de audiencia demográfica.
+      Pass-through de int_pais.
+    columns:
+      - name: id_pais
+        data_type: varchar
+        description: >
+          Surrogate key generada desde el nombre del país.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: nombre
+        data_type: varchar
+        description: >
+          Nombre del país con initcap aplicado en staging para garantizar consistencia.
+        data_tests:
+          - not_null
+          - unique
+
+  - name: dim_categoria_empresa
+    description: >
+      Dimensión de categorías de empresa. Pass-through de int_categoria_empresa.
+      Valores únicos de empresa_categoria normalizados con initcap desde staging.
+    columns:
+      - name: id_categoria_empresa
+        data_type: varchar
+        description: >
+          Surrogate key generada desde el nombre de la categoría.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: nombre
+        data_type: varchar
+        description: >
+          Nombre de la categoría (Fintech, Tecnología, Fitness, Educación, Hostelería,
+          Moda, Alimentación, Viajes, Retail, Salud).
+        data_tests:
+          - not_null
+          - unique
+
+  - name: dim_empresa
+    description: >
+      Dimensión plana de empresas. Un registro por empresa (empresa_id).
+      Pass-through de int_empresa aplicando selección de columnas.
+      web y email pueden ser nulos (~7% de registros según staging).
+    columns:
+      - name: id_empresa
+        data_type: varchar
+        description: >
+          Surrogate key generada desde empresa_id. PK de la dimensión.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: codigo_empresa
+        data_type: varchar
+        description: >
+          Identificador natural de la empresa (empresa_id en staging).
+        data_tests:
+          - not_null
+          - unique
+
+      - name: nombre
+        data_type: varchar
+        description: >
+          Nombre legal o comercial de la empresa.
+        data_tests:
+          - not_null
+
+      - name: web
+        data_type: varchar
+        description: >
+          URL del sitio web corporativo. Puede ser nulo (~7% de empresas sin web registrada).
+
+      - name: email
+        data_type: varchar
+        description: >
+          Email de contacto de la empresa. Puede ser nulo (~7% de registros).
+
+  - name: dim_perfil_social
+    description: >
+      Dimensión plana de perfiles sociales vigentes. Filtra snp_perfil_social por
+      dbt_valid_to is null para retener solo el estado actual de cada perfil.
+      Enriquecida con el nombre de la red social via JOIN con int_red_social.
+    columns:
+      - name: id_perfil_social
+        data_type: varchar
+        description: >
+          Surrogate key generada desde username + plataforma. PK de la dimensión
+          (unicidad garantizada por el filtro dbt_valid_to is null del snapshot).
+        data_tests:
+          - not_null
+          - unique
+
+      - name: codigo_perfil_social
+        data_type: varchar
+        description: >
+          Identificador natural del perfil (perfil_id en staging).
+        data_tests:
+          - not_null
+
+      - name: red_social
+        data_type: varchar
+        description: >
+          Nombre de la red social desnormalizado desde int_red_social.
+          Puede ser nulo si no hay match en el LEFT JOIN (plataforma no registrada
+          en int_red_social).
+
+      - name: nombre_usuario
+        data_type: varchar
+        description: >
+          Handle del perfil en la plataforma sin el prefijo '@'.
+        data_tests:
+          - not_null
+
+      - name: activo
+        data_type: boolean
+        description: >
+          Estado vigente del perfil en la plataforma.
+        data_tests:
+          - not_null
+
+  - name: dim_tipo_contenido
+    description: >
+      Dimensión de tipos de contenido publicado (Video, Story, Carrusel, Reel, Post Estático).
+      Pass-through de int_tipo_contenido.
+    columns:
+      - name: id_tipo_contenido
+        data_type: varchar
+        description: >
+          Surrogate key generada desde tipo_contenido.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: nombre
+        data_type: varchar
+        description: >
+          Nombre del tipo de contenido (Video, Story, Carrusel, Reel, Post Estático).
+        data_tests:
+          - not_null
+          - unique
+
+  - name: dim_tipo_interaccion
+    description: >
+      Dimensión de tipos de interacción (Like, Comentario, Guardado, Compartir).
+      Pass-through de int_tipo_interaccion.
+    columns:
+      - name: id_tipo_interaccion
+        data_type: varchar
+        description: >
+          Surrogate key generada desde tipo_interaccion.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: nombre
+        data_type: varchar
+        description: >
+          Nombre del tipo de interacción (Like, Comentario, Guardado, Compartir).
+        data_tests:
+          - not_null
+          - unique
+
+  - name: dim_fuente_ingesta
+    description: >
+      Dimensión de fuentes de ingesta. Pass-through de int_fuente_ingesta.
+    columns:
+      - name: id_fuente_ingesta
+        data_type: varchar
+        description: >
+          Surrogate key generada desde source_api.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: nombre
+        data_type: varchar
+        description: >
+          Nombre de la fuente de ingesta (api_v1, api_v2, manual_export).
+        data_tests:
+          - not_null
+          - unique
+
+  - name: dim_genero
+    description: >
+      Dimensión de géneros de audiencia unificados entre TikTok, Instagram y YouTube.
+      Pass-through de int_genero.
+    columns:
+      - name: id_genero
+        data_type: varchar
+        description: >
+          Surrogate key generada desde el valor de género.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: nombre
+        data_type: varchar
+        description: >
+          Nombre del género de audiencia unificado entre plataformas.
+        data_tests:
+          - not_null
+          - unique
+
+  - name: dim_rango_edad
+    description: >
+      Dimensión de rangos de edad con límites numéricos para facilitar filtros y
+      ordenaciones en Power BI. edad_max es NULL intencional para el rango 55+.
+      edad_min es NULL cuando rango_edad es 'Desconocido'.
+      Pass-through de int_rango_edad.
+    columns:
+      - name: id_rango_edad
+        data_type: varchar
+        description: >
+          Surrogate key generada desde el valor de rango_edad.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: rango_edad
+        data_type: varchar
+        description: >
+          Rango de edad en formato string (18-24, 25-34, 35-44, 45-54, 55+, Desconocido).
+        data_tests:
+          - not_null
+          - unique
+
+      - name: edad_min
+        data_type: number
+        description: >
+          Límite inferior del rango. NULL para el valor 'Desconocido'.
+          No se testea not_null porque el caso Desconocido lo deja intencionalmente NULL.
+
+      - name: edad_max
+        data_type: number
+        description: >
+          Límite superior del rango. NULL intencional para 55+ y para 'Desconocido'.
+
+  - name: fct_rendimiento_contenido
+    description: >
+      Hecho de rendimiento de contenido. Grano: post × tipo_interaccion.
+      Hasta 4 filas por post (Like, Comentario, Guardado, Compartir).
+      Las métricas de post (visualizaciones, alcance, impresiones, engagement_total)
+      se repiten en las 4 filas — al agregar sin filtrar por tipo_interaccion
+      usar engagement_total directamente o deduplicar previamente por id_post.
+      Enriquecida con id_pais_empresa e id_categoria_empresa via JOIN con int_empresa.
+    columns:
+      - name: id_interaccion
+        data_type: varchar
+        description: >
+          PK. Surrogate key de post × tipo_interaccion.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: id_post
+        data_type: varchar
+        description: >
+          Agrupador natural de métricas de post. No es único — aparece hasta 4 veces
+          por post, una por tipo de interacción.
+        data_tests:
+          - not_null
+
+      - name: id_tipo_interaccion
+        data_type: varchar
+        description: >
+          FK hacia dim_tipo_interaccion.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_tipo_interaccion')
+                field: id_tipo_interaccion
+
+      - name: id_empresa
+        data_type: varchar
+        description: >
+          Identificador natural de la empresa (empresa_id de staging). Incluido
+          para trazabilidad directa y como clave del JOIN con int_empresa.
+
+      - name: id_perfil_social
+        data_type: varchar
+        description: >
+          FK hacia dim_perfil_social. Puede ser NULL si el perfil no existe en
+          el snapshot vigente (heredado del LEFT JOIN en int_post).
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_perfil_social')
+                field: id_perfil_social
+
+      - name: id_tipo_contenido
+        data_type: varchar
+        description: >
+          FK hacia dim_tipo_contenido.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_tipo_contenido')
+                field: id_tipo_contenido
+
+      - name: id_fuente_ingesta
+        data_type: varchar
+        description: >
+          FK hacia dim_fuente_ingesta.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_fuente_ingesta')
+                field: id_fuente_ingesta
+
+      - name: id_fecha
+        data_type: int
+        description: >
+          FK hacia dim_fecha en formato YYYYMMDD. Derivado de fecha_publicacion.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_fecha')
+                field: id_fecha
+
+      - name: id_pais_empresa
+        data_type: varchar
+        description: >
+          Surrogate key del país de la empresa. Obtenida via JOIN con int_empresa.
+          Puede ser NULL si la empresa no tiene match (LEFT JOIN).
+
+      - name: id_categoria_empresa
+        data_type: varchar
+        description: >
+          Surrogate key de la categoría de la empresa. Obtenida via JOIN con int_empresa.
+          Puede ser NULL si la empresa no tiene match (LEFT JOIN).
+
+      - name: patrocinado
+        data_type: boolean
+        description: >
+          Indica si el post es contenido patrocinado.
+        data_tests:
+          - not_null
+
+      - name: es_campania
+        data_type: boolean
+        description: >
+          Indica si el post pertenece a una campaña de Black Friday.
+        data_tests:
+          - not_null
+
+      - name: visualizaciones
+        data_type: number
+        description: >
+          Total de visualizaciones del post. Mismo valor en las 4 filas del post.
+          Deduplicar por id_post antes de sumar en análisis de nivel post.
+        data_tests:
+          - not_null
+
+      - name: alcance
+        data_type: number
+        description: >
+          Cuentas únicas que vieron el post. Mismo valor en las 4 filas del post.
+        data_tests:
+          - not_null
+
+      - name: impresiones
+        data_type: number
+        description: >
+          Total de veces que se mostró el post, incluyendo vistas repetidas.
+          Mismo valor en las 4 filas del post.
+        data_tests:
+          - not_null
+
+      - name: engagement_total
+        data_type: number
+        description: >
+          Suma de todas las interacciones del post (likes + comentarios + guardados + compartidos).
+          Mismo valor en las 4 filas del post. Usar directamente para totales sin deduplicar.
+        data_tests:
+          - not_null
+
+      - name: total_interaccion
+        data_type: number
+        description: >
+          Número de interacciones del tipo indicado por id_tipo_interaccion para este post.
+          Varía entre las 4 filas del mismo post.
+        data_tests:
+          - not_null
+
+      - name: engagement_rate_pct
+        data_type: float
+        description: >
+          Ratio de engagement calculado como engagement_total / alcance × 100.
+          NULL si alcance = 0.
+
+  - name: fct_metrica_perfil
+    description: >
+      Hecho de evolución semanal de perfiles sociales. Grano: perfil × semana_snapshot.
+      Permite analizar crecimiento de seguidores, alcance e impresiones semana a semana.
+    columns:
+      - name: id_metrica_perfil
+        data_type: varchar
+        description: >
+          PK. Surrogate key generada desde username + plataforma + semana_snapshot.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: id_perfil_social
+        data_type: varchar
+        description: >
+          FK hacia dim_perfil_social.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_perfil_social')
+                field: id_perfil_social
+
+      - name: id_fecha
+        data_type: int
+        description: >
+          FK hacia dim_fecha en formato YYYYMMDD. Derivado de semana_snapshot.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_fecha')
+                field: id_fecha
+
+      - name: seguidores
+        data_type: number
+        description: >
+          Número total de seguidores del perfil en esta semana.
+        data_tests:
+          - not_null
+
+      - name: alcance_semanal
+        data_type: number
+        description: >
+          Cuentas únicas alcanzadas durante la semana.
+        data_tests:
+          - not_null
+
+      - name: impresiones_semanales
+        data_type: number
+        description: >
+          Total de impresiones acumuladas en la semana, incluyendo vistas repetidas.
+        data_tests:
+          - not_null
+
+      - name: visitas_perfil
+        data_type: number
+        description: >
+          Visitas directas al perfil durante la semana.
+        data_tests:
+          - not_null
+
+      - name: tasa_alcance_pct
+        data_type: float
+        description: >
+          Porcentaje de seguidores alcanzados en la semana (alcance_semanal / seguidores × 100).
+          NULL si seguidores = 0.
+
+      - name: tasa_cobertura_pct
+        data_type: float
+        description: >
+          Porcentaje de impresiones que llegaron a usuarios únicos
+          (alcance_semanal / impresiones_semanales × 100). NULL si impresiones = 0.
+
+  - name: fct_segmento_audiencia
+    description: >
+      Hecho de composición demográfica de audiencia. Grano: perfil × snapshot × género × edad × país.
+      Permite analizar cómo está compuesta la audiencia de cada perfil y su evolución en el tiempo.
+    columns:
+      - name: id_audiencia
+        data_type: varchar
+        description: >
+          PK. Surrogate key generada desde username, plataforma, genero,
+          edad_segmento, pais y fecha_snapshot.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: id_perfil_social
+        data_type: varchar
+        description: >
+          FK hacia dim_perfil_social.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_perfil_social')
+                field: id_perfil_social
+
+      - name: id_genero
+        data_type: varchar
+        description: >
+          FK hacia dim_genero.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_genero')
+                field: id_genero
+
+      - name: id_rango_edad
+        data_type: varchar
+        description: >
+          FK hacia dim_rango_edad.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_rango_edad')
+                field: id_rango_edad
+
+      - name: id_pais
+        data_type: varchar
+        description: >
+          FK hacia dim_pais.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_pais')
+                field: id_pais
+
+      - name: id_fecha
+        data_type: int
+        description: >
+          FK hacia dim_fecha en formato YYYYMMDD. Derivado de fecha_snapshot.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_fecha')
+                field: id_fecha
+
+      - name: porcentaje
+        data_type: float
+        description: >
+          Porcentaje de la audiencia total que corresponde a este segmento demográfico (0-100).
+          Contrato de presentación: si llega NULL desde upstream hay que corregir el coalesce
+          en int_audiencia_demografica.
+        data_tests:
+          - not_null
+
+      - name: seguidores
+        data_type: number
+        description: >
+          Número absoluto de seguidores en este segmento demográfico.
+          Contrato de presentación: si llega NULL desde upstream hay que corregir
+          el coalesce en int_audiencia_demografica.
+        data_tests:
+          - not_null

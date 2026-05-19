@@ -1,0 +1,595 @@
+version: 2
+
+models:
+  - name: stg_social_cloud_schema__raw_posts_interacciones
+    description: >
+      Staging de posts e interacciones sociales. Normaliza los valores de plataforma,
+      estandariza tipo_contenido y tipo_interaccion con initcap, y elimina el '@' de
+      usernames. Cada fila representa una combinación única de post + tipo de interacción.
+      La tabla fuente puede contener hasta 4 filas por post (una por tipo_interaccion).
+    columns:
+      - name: post_id
+        data_type: varchar
+        description: >
+          Identificador único del post en la plataforma de origen. PK compuesta con tipo_interaccion.
+        data_tests:
+          - not_null
+
+      - name: raw_json_id
+        data_type: varchar
+        description: >
+          UUID del registro JSON crudo en la tabla bronze. Trazabilidad hacia la fuente.
+        data_tests:
+          - not_null
+
+      - name: username
+        data_type: varchar
+        description: >
+          Handle del perfil publicador, sin el prefijo '@'.
+        data_tests:
+          - not_null
+
+      - name: empresa_id
+        data_type: varchar
+        description: >
+          Identificador de la empresa propietaria del perfil. FK hacia
+          stg_social_cloud_schema__raw_perfiles_empresas.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_social_cloud_schema__raw_perfiles_empresas')
+                field: empresa_id
+
+      - name: plataforma
+        data_type: varchar
+        description: >
+          Plataforma social normalizada. Valores válidos: Instagram, Tiktok, Youtube, Desconocido.
+          Consolidado desde múltiples variantes crudas (ig, insta, tiktok, tk, yt, etc.).
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["Instagram", "Tiktok", "Youtube", "Desconocido"]
+
+      - name: fecha_publicacion
+        data_type: timestamp_ntz
+        description: >
+          Timestamp UTC de publicación del post en la plataforma.
+        data_tests:
+          - not_null
+
+      - name: tipo_contenido
+        data_type: varchar
+        description: >
+          Formato del contenido publicado (Video, Story, Carrusel, Reel, Post Estático).
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["Video", "Story", "Carrusel", "Reel", "Post Estático"]
+
+      - name: descripcion_en
+        data_type: varchar
+        description: >
+          Texto descriptivo del post. Puede ser nulo (~7% de registros); se mantiene
+          el nombre _en porque la fuente original está en inglés.
+
+      - name: patrocinado
+        data_type: boolean
+        description: >
+          Indica si el post es contenido patrocinado/publicidad pagada.
+        data_tests:
+          - not_null
+
+      - name: es_campania_bf
+        data_type: boolean
+        description: >
+          Indica si el post pertenece a una campaña de Black Friday.
+        data_tests:
+          - not_null
+
+      - name: hashtags
+        data_type: varchar
+        description: >
+          Cadena de hashtags asociados al post, separados por espacios.
+
+      - name: visualizaciones_post
+        data_type: number
+        description: >
+          Número total de visualizaciones del post.
+        data_tests:
+          - not_null
+
+      - name: alcance_post
+        data_type: number
+        description: >
+          Número de cuentas únicas que vieron el post.
+        data_tests:
+          - not_null
+
+      - name: impresiones_post
+        data_type: number
+        description: >
+          Total de veces que se mostró el post (incluye vistas repetidas).
+          Debe ser >= alcance_post.
+        data_tests:
+          - not_null
+
+      - name: tipo_interaccion
+        data_type: varchar
+        description: >
+          Tipo de interacción registrada en esta fila (Like, Comentario, Guardado, Compartir).
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["Like", "Comentario", "Guardado", "Compartir"]
+
+      - name: cantidad_interaccion
+        data_type: number
+        description: >
+          Número de interacciones del tipo indicado para este post.
+        data_tests:
+          - not_null
+
+      - name: engagement_total
+        data_type: number
+        description: >
+          Suma total de todas las interacciones del post (likes + comentarios + guardados + compartidos).
+          Mismo valor para todas las filas del mismo post_id.
+        data_tests:
+          - not_null
+
+      - name: source_api
+        data_type: varchar
+        description: >
+          Origen de la ingesta del dato (api_v1, api_v2, manual_export). Normalizado a minúsculas.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["api_v1", "api_v2", "manual_export"]
+
+      - name: created_at
+        data_type: timestamp_ntz
+        description: >
+          Timestamp de creación del registro en la fuente.
+        data_tests:
+          - not_null
+
+      - name: updated_at
+        data_type: timestamp_ntz
+        description: >
+          Timestamp de última actualización en la fuente. Puede ser nulo si no ha sido modificado.
+
+      - name: _line
+        data_type: number
+        description: >
+          Número de línea del archivo fuente. Metadato de Fivetran para trazabilidad.
+
+      - name: _fivetran_synced
+        data_type: timestamp_tz
+        description: >
+          Timestamp de la última sincronización de Fivetran. Usado para freshness.
+        data_tests:
+          - not_null
+
+  - name: stg_social_cloud_schema__raw_perfiles_empresas
+    description: >
+      Staging de perfiles de empresa por plataforma social con snapshot semanal de métricas.
+      Desduplicado via QUALIFY: se conserva el registro más antiguo (created_at asc) por
+      combinación perfil_id + semana_snapshot. Cada fila representa el estado de un perfil
+      en una semana concreta.
+    columns:
+      - name: empresa_id
+        data_type: varchar
+        description: >
+          Identificador único de la empresa. PK de la dimensión empresa.
+        data_tests:
+          - not_null
+
+      - name: empresa_nombre
+        data_type: varchar
+        description: >
+          Nombre legal o comercial de la empresa.
+        data_tests:
+          - not_null
+
+      - name: empresa_categoria
+        data_type: varchar
+        description: >
+          Sector o vertical de la empresa con initcap. Valores observados:
+          Fintech, Tecnología, Fitness, Educación, Hostelería, Moda, Alimentación,
+          Viajes, Retail, Salud.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  [
+                    "Fintech",
+                    "Tecnología",
+                    "Fitness",
+                    "Educación",
+                    "Hostelería",
+                    "Moda",
+                    "Alimentación",
+                    "Viajes",
+                    "Retail",
+                    "Salud",
+                  ]
+
+      - name: empresa_pais
+        data_type: varchar
+        description: >
+          País de registro de la empresa (Chile, Argentina, Colombia, España, México).
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["Chile", "Argentina", "Colombia", "España", "México"]
+
+      - name: empresa_web
+        data_type: varchar
+        description: >
+          URL del sitio web corporativo. Puede ser nulo (~7% de empresas sin web registrada).
+
+      - name: empresa_email
+        data_type: varchar
+        description: >
+          Email de contacto de la empresa. Puede ser nulo (~7% de registros).
+
+      - name: perfil_id
+        data_type: varchar
+        description: >
+          Identificador único del perfil social. PK compuesta con semana_snapshot.
+        data_tests:
+          - not_null
+
+      - name: username
+        data_type: varchar
+        description: >
+          Handle del perfil en la plataforma, sin el prefijo '@'.
+        data_tests:
+          - not_null
+
+      - name: plataforma
+        data_type: varchar
+        description: >
+          Plataforma social normalizada (Instagram, Tiktok, Youtube, Desconocido).
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["Instagram", "Tiktok", "Youtube", "Desconocido"]
+
+      - name: fecha_creacion_perfil
+        data_type: date
+        description: >
+          Fecha en que se creó el perfil en la plataforma.
+        data_tests:
+          - not_null
+
+      - name: activo
+        data_type: boolean
+        description: >
+          Indica si el perfil está activo en la plataforma al momento del snapshot.
+        data_tests:
+          - not_null
+
+      - name: semana_snapshot
+        data_type: date
+        description: >
+          Fecha de inicio de la semana del snapshot (lunes). PK compuesta con perfil_id.
+          La tabla fuente se actualiza semanalmente.
+        data_tests:
+          - not_null
+
+      - name: seguidores
+        data_type: number
+        description: >
+          Número total de seguidores del perfil en la semana del snapshot.
+        data_tests:
+          - not_null
+
+      - name: alcance_semanal
+        data_type: number
+        description: >
+          Cuentas únicas alcanzadas durante la semana del snapshot.
+        data_tests:
+          - not_null
+
+      - name: impresiones_semanales
+        data_type: number
+        description: >
+          Total de impresiones acumuladas en la semana (incluye vistas repetidas).
+        data_tests:
+          - not_null
+
+      - name: visitas_perfil
+        data_type: number
+        description: >
+          Número de visitas directas al perfil durante la semana.
+        data_tests:
+          - not_null
+
+      - name: created_at
+        data_type: timestamp_ntz
+        description: >
+          Timestamp de creación del registro en la fuente.
+        data_tests:
+          - not_null
+
+      - name: updated_at
+        data_type: timestamp_ntz
+        description: >
+          Timestamp de última actualización. Puede ser nulo si no hubo modificaciones.
+
+      - name: _line
+        data_type: number
+        description: >
+          Número de línea del archivo fuente. Metadato de Fivetran.
+
+      - name: _fivetran_synced
+        data_type: timestamp_tz
+        description: >
+          Timestamp de la última sincronización de Fivetran. Usado para freshness.
+        data_tests:
+          - not_null
+
+  - name: stg_social_cloud_schema__raw_audiencia_demografica
+    description: >
+      Staging de segmentación demográfica de audiencia por perfil y plataforma.
+      La tabla bronze consolida tres esquemas distintos (TikTok, Instagram, YouTube)
+      en una sola tabla ancha; esto implica que por cada fila solo estará poblado
+      el bloque de columnas de la plataforma correspondiente, siendo el resto NULL.
+      Cada fila representa un segmento demográfico (género × edad × país) para un
+      perfil en una fecha de snapshot concreta.
+    columns:
+      - name: empresa_id
+        data_type: varchar
+        description: >
+          Identificador de la empresa propietaria del perfil. FK hacia
+          stg_social_cloud_schema__raw_perfiles_empresas.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_social_cloud_schema__raw_perfiles_empresas')
+                field: empresa_id
+
+      - name: perfil_id
+        data_type: varchar
+        description: >
+          Identificador del perfil social. FK hacia
+          stg_social_cloud_schema__raw_perfiles_empresas.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_social_cloud_schema__raw_perfiles_empresas')
+                field: perfil_id
+
+      - name: tk_handle
+        data_type: varchar
+        description: >
+          Handle de TikTok sin '@'. Nulo para registros de Instagram o YouTube.
+
+      - name: tk_platform
+        data_type: varchar
+        description: >
+          Literal 'Tiktok' cuando tk_handle está poblado, NULL en caso contrario.
+          El SQL fuerza siempre este literal, por lo que no requiere accepted_values.
+
+      - name: snapshot_date
+        data_type: date
+        description: >
+          Fecha del snapshot de audiencia de TikTok. Nulo para otras plataformas.
+
+      - name: gender_segment
+        data_type: varchar
+        description: >
+          Segmento de género de audiencia TikTok (Hombre, Mujer, No Binario).
+          Nulo para registros de Instagram o YouTube.
+
+      - name: age_segment
+        data_type: varchar
+        description: >
+          Rango de edad de la audiencia TikTok (18-24, 25-34, 35-44, 45-54, 55+).
+          Nulo para registros de Instagram o YouTube.
+
+      - name: country
+        data_type: varchar
+        description: >
+          País del segmento de audiencia TikTok. Nulo para otras plataformas.
+
+      - name: audience_share_pct
+        data_type: float
+        description: >
+          Porcentaje de la audiencia TikTok que corresponde a este segmento (0-100).
+          Nulo para otras plataformas.
+
+      - name: seg_followers
+        data_type: number
+        description: >
+          Número absoluto de seguidores TikTok en este segmento demográfico.
+          Nulo para otras plataformas.
+
+      - name: ig_username
+        data_type: varchar
+        description: >
+          Handle de Instagram sin '@'. Nulo para registros de TikTok o YouTube.
+
+      - name: ig_platform
+        data_type: varchar
+        description: >
+          Literal 'Instagram' cuando ig_username está poblado, NULL en caso contrario.
+          El SQL fuerza siempre este literal, por lo que no requiere accepted_values.
+
+      - name: report_date
+        data_type: date
+        description: >
+          Fecha del reporte de audiencia de Instagram. Nulo para otras plataformas.
+
+      - name: audience_gender
+        data_type: varchar
+        description: >
+          Segmento de género de audiencia Instagram. Nulo para otras plataformas.
+
+      - name: audience_age
+        data_type: varchar
+        description: >
+          Rango de edad de la audiencia Instagram. Nulo para otras plataformas.
+
+      - name: audience_country
+        data_type: varchar
+        description: >
+          País del segmento de audiencia Instagram. Nulo para otras plataformas.
+
+      - name: pct_audience
+        data_type: float
+        description: >
+          Porcentaje de audiencia Instagram en este segmento (0-100).
+          Nulo para otras plataformas.
+
+      - name: follower_count_seg
+        data_type: number
+        description: >
+          Número absoluto de seguidores Instagram en este segmento.
+          Nulo para otras plataformas.
+
+      - name: yt_handle
+        data_type: varchar
+        description: >
+          Handle de YouTube sin '@'. Nulo para registros de TikTok o Instagram.
+
+      - name: network
+        data_type: varchar
+        description: >
+          Literal 'Youtube' cuando yt_handle está poblado, NULL en caso contrario.
+          El SQL fuerza siempre este literal, por lo que no requiere accepted_values.
+
+      - name: period
+        data_type: date
+        description: >
+          Período del reporte de audiencia de YouTube. Nulo para otras plataformas.
+
+      - name: genero
+        data_type: varchar
+        description: >
+          Segmento de género de audiencia YouTube (renombrado desde sexo en la fuente).
+          Nulo para otras plataformas.
+
+      - name: edad
+        data_type: varchar
+        description: >
+          Rango de edad de la audiencia YouTube. Nulo para otras plataformas.
+
+      - name: pais_audiencia
+        data_type: varchar
+        description: >
+          País del segmento de audiencia YouTube. Nulo para otras plataformas.
+
+      - name: porcentaje
+        data_type: float
+        description: >
+          Porcentaje de audiencia YouTube en este segmento (0-100).
+          Nulo para otras plataformas.
+
+      - name: n_seguidores_seg
+        data_type: number
+        description: >
+          Número absoluto de suscriptores YouTube en este segmento.
+          Nulo para otras plataformas.
+
+      - name: created_at
+        data_type: timestamp_ntz
+        description: >
+          Timestamp de creación del registro en la fuente.
+        data_tests:
+          - not_null
+
+      - name: updated_at
+        data_type: timestamp_ntz
+        description: >
+          Timestamp de última actualización. Puede ser nulo si no hubo modificaciones.
+
+      - name: _line
+        data_type: number
+        description: >
+          Número de línea del archivo fuente. Metadato de Fivetran.
+
+      - name: _fivetran_synced
+        data_type: timestamp_tz
+        description: >
+          Timestamp de la última sincronización de Fivetran. Usado para freshness.
+        data_tests:
+          - not_null
+
+  - name: stg_social_cloud_schema_modificar_perfil__raw_modificar_perfil
+    description: >
+      Staging del catálogo de perfiles sociales gestionados internamente. Recoge los
+      identificadores de perfil, empresa y red social, junto con el nombre de usuario
+      y la fecha de creación. Sin transformaciones adicionales: la fuente ya viene
+      limpia desde el sistema de gestión de perfiles.
+    columns:
+      - name: id_perfil_social
+        data_type: varchar
+        description: >
+          Identificador único del perfil social en el sistema interno. PK del modelo.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: codigo_perfil_social
+        data_type: varchar
+        description: >
+          Código alfanumérico alternativo del perfil social. Puede ser nulo.
+
+      - name: id_empresa
+        data_type: varchar
+        description: >
+          Identificador de la empresa propietaria del perfil. FK hacia
+          stg_social_cloud_schema__raw_perfiles_empresas.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_empresa')
+                field: id_empresa
+
+      - name: id_red_social
+        data_type: varchar
+        description: >
+          Identificador de la red social asociada al perfil.
+        data_tests:
+          - not_null
+
+      - name: nombre_usuario
+        data_type: varchar
+        description: >
+          Nombre de usuario del perfil en la red social.
+        data_tests:
+          - not_null
+
+      - name: fecha_creacion
+        data_type: date
+        description: >
+          Fecha de creación del perfil en el sistema interno.
+        data_tests:
+          - not_null
+
+      - name: activo
+        data_type: boolean
+        description: >
+          Indica si el perfil está activo en el sistema interno.
+        data_tests:
+          - not_null
+
+      - name: _fivetran_synced
+        data_type: timestamp_tz
+        description: >
+          Timestamp de la última sincronización de Fivetran. Usado para freshness.
+        data_tests:
+          - not_null

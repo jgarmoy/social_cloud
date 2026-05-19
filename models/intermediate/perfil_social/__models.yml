@@ -1,0 +1,195 @@
+version: 2
+
+models:
+  - name: int_pais
+    description: >
+      Dimensión de países. Unión de empresa_pais (staging perfiles) y pais (audiencia demográfica).
+      initcap aplicado en ambas fuentes antes de la unión para evitar duplicados por capitalización.
+      El UNION (sin ALL) garantiza unicidad de nombre.
+    columns:
+      - name: id_pais
+        data_type: varchar
+        description: >
+          Clave surrogate generada desde el nombre del país normalizado.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: nombre
+        data_type: varchar
+        description: >
+          Nombre del país normalizado con initcap. 'Desconocido' cuando pais es NULL
+          en la fuente de audiencia demográfica.
+        data_tests:
+          - not_null
+          - unique
+
+  - name: int_categoria_empresa
+    description: >
+      Dimensión de categorías de empresa. Valores únicos de empresa_categoria en staging.
+      empresa_categoria viene normalizada con initcap desde staging.
+    columns:
+      - name: id_categoria_empresa
+        data_type: varchar
+        description: >
+          Clave surrogate generada desde el nombre de la categoría.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: nombre
+        data_type: varchar
+        description: >
+          Nombre de la categoría tal como viene normalizado desde staging
+          (Fintech, Tecnología, Fitness, Educación, Hostelería, Moda,
+          Alimentación, Viajes, Retail, Salud).
+        data_tests:
+          - not_null
+          - unique
+
+  - name: int_empresa
+    description: >
+      Dimensión de empresas. Un registro por empresa (empresa_id).
+      Surrogate key generada desde empresa_id.
+      El QUALIFY prioriza registros con email y web no nulos; desempate por created_at asc.
+    columns:
+      - name: id_empresa
+        data_type: varchar
+        description: >
+          Clave surrogate generada desde empresa_id.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: codigo_empresa
+        data_type: varchar
+        description: >
+          Identificador natural de la empresa (empresa_id en staging).
+          Unicidad garantizada por el QUALIFY de este modelo.
+        data_tests:
+          - unique
+
+      - name: nombre
+        data_type: varchar
+        description: >
+          Nombre legal o comercial de la empresa. Validado not_null en staging.
+
+      - name: id_pais
+        data_type: varchar
+        description: >
+          Clave surrogate del país. Generada desde empresa_pais, validado not_null
+          en staging. FK hacia int_pais.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('int_pais')
+                field: id_pais
+
+      - name: id_categoria_empresa
+        data_type: varchar
+        description: >
+          Clave surrogate de la categoría. Generada desde empresa_categoria, validado
+          not_null en staging. FK hacia int_categoria_empresa.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('int_categoria_empresa')
+                field: id_categoria_empresa
+
+      - name: web
+        data_type: varchar
+        description: >
+          URL del sitio web corporativo. Puede ser nulo (~7% de empresas sin web registrada).
+
+      - name: email
+        data_type: varchar
+        description: >
+          Email de contacto de la empresa. Puede ser nulo (~7% de registros).
+
+  - name: int_red_social
+    description: >
+      Dimensión de redes sociales. Valores únicos de plataforma en staging perfiles.
+      plataforma viene normalizada desde staging (Instagram, Tiktok, Youtube, Desconocido).
+    columns:
+      - name: id_red_social
+        data_type: varchar
+        description: >
+          Clave surrogate generada desde el nombre de la plataforma.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: nombre
+        data_type: varchar
+        description: >
+          Nombre de la plataforma normalizado desde staging
+          (Instagram, Tiktok, Youtube, Desconocido).
+        data_tests:
+          - not_null
+          - unique
+
+  - name: int_perfil_social
+    description: >
+      Dimensión de perfiles sociales. Un registro por username + plataforma.
+      Surrogate key generada desde perfil_id (identificador natural del perfil).
+      El QUALIFY conserva el registro más reciente por (username, plataforma)
+      si hay múltiples perfil_id para la misma combinación.
+    columns:
+      - name: id_perfil_social
+        data_type: varchar
+        description: >
+          Clave surrogate generada desde perfil_id.
+          Unicidad garantizada por el QUALIFY de este modelo sobre (username, plataforma).
+        data_tests:
+          - not_null
+          - unique
+
+      - name: codigo_perfil_social
+        data_type: varchar
+        description: >
+          Identificador natural del perfil (perfil_id en staging).
+          Validado not_null en staging.
+
+      - name: id_empresa
+        data_type: varchar
+        description: >
+          Clave surrogate de la empresa. Generada desde empresa_id, validado not_null
+          en staging. FK hacia int_empresa.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('int_empresa')
+                field: id_empresa
+
+      - name: id_red_social
+        data_type: varchar
+        description: >
+          Clave surrogate de la red social. Generada desde plataforma, validado not_null
+          en staging. FK hacia int_red_social.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('int_red_social')
+                field: id_red_social
+
+      - name: nombre_usuario
+        data_type: varchar
+        description: >
+          Handle del perfil en la plataforma sin '@'. Validado not_null en staging.
+
+      - name: fecha_creacion
+        data_type: date
+        description: >
+          Fecha de creación del perfil en la plataforma. Validado not_null en staging.
+
+      - name: activo
+        data_type: boolean
+        description: >
+          Indica si el perfil está activo en la plataforma al momento del snapshot
+          más reciente. Validado not_null en staging.
+
+      - name: _fivetran_synced
+        data_type: timestamp_tz
+        description: >
+          Timestamp de la última sincronización de Fivetran. Validado en staging.
+          Usado como criterio de desempate en el QUALIFY de este modelo.

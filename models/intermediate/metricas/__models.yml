@@ -1,0 +1,127 @@
+version: 2
+
+models:
+  - name: int_interaccion
+    description: >
+      Métricas de interacciones por post y tipo. Grano: post_id × tipo_interaccion.
+      Complementa int_post manteniendo la granularidad que int_post colapsa.
+      Materializado como incremental con merge sobre id_interaccion.
+    columns:
+      - name: id_interaccion
+        data_type: varchar
+        description: >
+          Clave surrogate generada desde post_id + tipo_interaccion.
+          Unicidad garantizada por el QUALIFY de este modelo.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: id_post
+        data_type: varchar
+        description: >
+          Clave surrogate del post. Generada desde post_id. FK hacia int_post.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_post')
+                field: id_post
+
+      - name: id_tipo_interaccion
+        data_type: varchar
+        description: >
+          Clave surrogate del tipo de interacción. Generada desde tipo_interaccion.
+          FK hacia int_tipo_interaccion.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_tipo_interaccion')
+                field: id_tipo_interaccion
+
+      - name: total_interaccion
+        data_type: number
+        description: >
+          Número de interacciones del tipo indicado para este post.
+          Renombrado desde cantidad_interaccion en staging, donde ya se valida not_null.
+
+      - name: created_at
+        data_type: timestamp_ntz
+        description: >
+          Timestamp de creación del registro en la fuente original. Validado en staging.
+
+      - name: updated_at
+        data_type: timestamp_ntz
+        description: >
+          Timestamp de última actualización. Puede ser nulo si no hubo modificaciones.
+
+      - name: _fivetran_synced
+        data_type: timestamp_tz
+        description: >
+          Timestamp de la última sincronización de Fivetran. Validado en staging.
+          Usado como criterio de desempate en el QUALIFY de este modelo.
+
+  - name: int_metrica_perfil
+    description: >
+      Métricas semanales de perfil. Grano: perfil (username + plataforma) × semana_snapshot.
+      La deduplicación por perfil_id + semana_snapshot viene heredada desde staging,
+      lo que garantiza la unicidad de id_metrica_perfil.
+    columns:
+      - name: id_metrica_perfil
+        data_type: varchar
+        description: >
+          Clave surrogate generada desde username + plataforma + semana_snapshot.
+          Unicidad garantizada por la deduplicación heredada de staging.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: id_perfil_social
+        data_type: varchar
+        description: >
+          Clave surrogate del perfil social. Generada desde perfil_id. FK hacia int_perfil_social.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_perfil_social')
+                field: id_perfil_social
+
+      - name: semana_snapshot
+        data_type: date
+        description: >
+          Fecha de inicio de la semana del snapshot (lunes). Validado not_null en staging.
+
+      - name: seguidores
+        data_type: number
+        description: >
+          Número total de seguidores del perfil en la semana del snapshot.
+          Validado not_null en staging.
+
+      - name: alcance_semanal
+        data_type: number
+        description: >
+          Cuentas únicas alcanzadas durante la semana del snapshot.
+          Validado not_null en staging.
+
+      - name: impresiones_semanales
+        data_type: number
+        description: >
+          Total de impresiones acumuladas en la semana (incluye vistas repetidas).
+          Validado not_null en staging.
+
+      - name: visitas_perfil
+        data_type: number
+        description: >
+          Número de visitas directas al perfil durante la semana.
+          Validado not_null en staging.
+
+      - name: created_at
+        data_type: timestamp_ntz
+        description: >
+          Timestamp de creación del registro en la fuente original. Validado en staging.
+
+      - name: updated_at
+        data_type: timestamp_ntz
+        description: >
+          Timestamp de última actualización. Puede ser nulo si no hubo modificaciones.
