@@ -17,7 +17,7 @@ with
                     ]
                 )
             }} as id_audiencia,
-            {{ dbt_utils.generate_surrogate_key(["username", "plataforma"]) }}
+            {{ dbt_utils.generate_surrogate_key(["perfil_id"]) }}
             as id_perfil_social,
             {{ dbt_utils.generate_surrogate_key(["genero"]) }} as id_genero,
             {{ dbt_utils.generate_surrogate_key(["edad_segmento"]) }} as id_rango_edad,

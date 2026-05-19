@@ -10,7 +10,7 @@ with
                     ["username", "plataforma", "semana_snapshot"]
                 )
             }} as id_metrica_perfil,
-            {{ dbt_utils.generate_surrogate_key(["username", "plataforma"]) }}
+            {{ dbt_utils.generate_surrogate_key(["perfil_id"]) }}
             as id_perfil_social,
             semana_snapshot,
             seguidores,

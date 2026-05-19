@@ -24,7 +24,8 @@ with
             as id_tipo_interaccion,
             cantidad_interaccion as total_interaccion,
             created_at,
-            updated_at
+            updated_at,
+            _fivetran_synced
         from source
     )
 

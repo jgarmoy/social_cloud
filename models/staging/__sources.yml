@@ -180,3 +180,27 @@ sources:
             data_type: timestamp_ntz
           - name: updated_at
             data_type: timestamp_ntz
+
+  - name: social_cloud_schema_modificar_perfil
+    database: "{{ env_var('DBT_ENVIRONMENTS', 'FAIL') }}_social_cloud_bronze_db"
+    tables:
+      - name: raw_modificar_perfil_social
+        columns:
+          - name: _line
+            data_type: number
+          - name: _fivetran_synced
+            data_type: timestamp_tz
+          - name: id_perfil_social
+            data_type: varchar
+          - name: codigo_perfil_social
+            data_type: varchar
+          - name: id_empresa
+            data_type: varchar
+          - name: id_red_social
+            data_type: varchar
+          - name: nombre_usuario
+            data_type: varchar
+          - name: fecha_creacion
+            data_type: date
+          - name: activo
+            data_type: boolean

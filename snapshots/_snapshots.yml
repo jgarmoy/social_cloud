@@ -10,13 +10,9 @@ snapshots:
       La clave única es codigo_perfil_social (perfil_id en staging).
     config:
       target_schema: snapshots
-      unique_key: codigo_perfil_social
-      strategy: check
-      check_cols:
-        - activo
-        - nombre_usuario
-        - id_empresa
-        - id_red_social
+      unique_key: id_perfil_social
+      strategy: timestamp
+      updated_at: _fivetran_synced 
       invalidate_hard_deletes: true
     columns:
       - name: id_perfil_social

@@ -5,7 +5,7 @@ with
 
     pais as (select * from {{ ref("int_pais") }}),
 
-    final (
+    final as (
         select
             e.id_empresa,
             e.codigo_empresa,
@@ -15,11 +15,7 @@ with
             e.id_categoria_empresa,
             c.nombre as categoria,
             e.web,
-            e.email,
-            e.dbt_valid_from as valido_desde,
-            e.dbt_valid_to as valido_hasta,
-            (e.dbt_valid_to is null)::boolean as es_vigente
-
+            e.email
         from empresa e
         left join pais p on e.id_pais = p.id_pais
         left join categoria c on e.id_categoria_empresa = c.id_categoria_empresa
