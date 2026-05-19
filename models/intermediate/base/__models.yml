@@ -1,0 +1,132 @@
+version: 2
+
+models:
+  - name: int_audiencia_demografica
+    description: >
+      Unificación de los tres bloques de audiencia demográfica (TikTok, Instagram, YouTube)
+      en una estructura única y normalizada. La plataforma se infiere desde el handle,
+      no desde la columna platform de la fuente. Se descartan filas sin username,
+      plataforma o fecha_snapshot identificables. Desduplicado por
+      (username, plataforma, genero, edad_segmento, pais, fecha_snapshot) priorizando
+      filas con pais poblado y el _fivetran_synced más reciente.
+    columns:
+      - name: empresa_id
+        data_type: varchar
+        description: >
+          Identificador de la empresa propietaria del perfil. Heredado de staging,
+          donde ya se valida not_null e integridad referencial.
+
+      - name: perfil_id
+        data_type: varchar
+        description: >
+          Identificador del perfil social. Heredado de staging,
+          donde ya se valida not_null e integridad referencial.
+
+      - name: username
+        data_type: varchar
+        description: >
+          Coalesce de tk_handle, ig_username, yt_handle. Garantizado not_null
+          por el filtro WHERE de este modelo.
+        data_tests:
+          - not_null
+
+      - name: plataforma
+        data_type: varchar
+        description: >
+          Inferida desde el handle activo. Campo nuevo respecto a staging — en staging
+          cada plataforma tenía su propia columna (tk_platform, ig_platform, network).
+          Garantizado not_null por el filtro WHERE de este modelo.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["Instagram", "Tiktok", "Youtube"]
+
+      - name: fecha_snapshot
+        data_type: date
+        description: >
+          Coalesce de snapshot_date, report_date y period. Garantizado not_null
+          por el filtro WHERE de este modelo.
+        data_tests:
+          - not_null
+
+      - name: genero
+        data_type: varchar
+        description: >
+          Coalesce de gender_segment, audience_gender, genero. Tiene fallback
+          'Desconocido', por lo que nunca es NULL.
+        data_tests:
+          - not_null
+
+      - name: edad_segmento
+        data_type: varchar
+        description: >
+          Coalesce de age_segment, audience_age, edad. Sin fallback: puede ser NULL
+          si los tres campos fuente son NULL para una fila.
+
+      - name: pais
+        data_type: varchar
+        description: >
+          Coalesce de country, audience_country, pais_audiencia. Tiene fallback
+          'Desconocido', por lo que nunca es NULL.
+        data_tests:
+          - not_null
+
+      - name: porcentaje_audiencia
+        data_type: float
+        description: >
+          Coalesce de audience_share_pct, pct_audience, porcentaje. Sin fallback:
+          puede ser NULL si los tres campos fuente son NULL para una fila.
+
+      - name: seguidores
+        data_type: number
+        description: >
+          Coalesce de seg_followers, follower_count_seg, n_seguidores_seg. Sin fallback:
+          puede ser NULL si los tres campos fuente son NULL para una fila.
+
+      - name: created_at
+        data_type: timestamp_ntz
+        description: >
+          Timestamp de creación del registro en la fuente original. Validado en staging.
+
+      - name: updated_at
+        data_type: timestamp_ntz
+        description: >
+          Timestamp de última actualización. Puede ser nulo si no hubo modificaciones.
+
+      - name: _line
+        data_type: number
+        description: >
+          Número de línea del archivo fuente. Metadato de Fivetran para trazabilidad.
+
+      - name: _fivetran_synced
+        data_type: timestamp_tz
+        description: >
+          Timestamp de la última sincronización de Fivetran. Validado en staging.
+
+  - name: int_hashtag_post_separar
+    description: >
+      Modelo auxiliar. Explota la cadena de hashtags de cada post en filas individuales.
+      Filtra NULLs, strings vacíos y tokens vacíos generados por espacios dobles.
+      Normaliza quitando '#' si existe y aplicando lowercase.
+      Paso previo a int_hashtag e int_post_hashtag.
+    columns:
+      - name: post_id
+        data_type: varchar
+        description: >
+          Identificador del post de origen. Heredado de staging,
+          donde ya se valida not_null.
+
+      - name: plataforma
+        data_type: varchar
+        description: >
+          Plataforma social del post. Heredada de staging,
+          donde ya se valida not_null y accepted_values.
+
+      - name: hashtag
+        data_type: varchar
+        description: >
+          Hashtag individual sin '#', en lowercase. Generado en este modelo
+          por split y normalización; garantizado not_null y no vacío por el filtro WHERE.
+        data_tests:
+          - not_null

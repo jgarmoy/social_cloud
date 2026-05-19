@@ -1,0 +1,399 @@
+version: 2
+
+models:
+
+  - name: int_tipo_contenido
+    description: >
+      Dimensión de tipos de contenido. Valores únicos de tipo_contenido en staging posts.
+      tipo_contenido viene normalizado con initcap desde staging.
+    columns:
+      - name: id_tipo_contenido
+        data_type: varchar
+        description: >
+          Clave surrogate generada desde el nombre del tipo de contenido.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: nombre
+        data_type: varchar
+        description: >
+          Nombre del tipo de contenido normalizado desde staging
+          (Video, Story, Carrusel, Reel, Post Estático).
+        data_tests:
+          - not_null
+          - unique
+
+  - name: int_tipo_interaccion
+    description: >
+      Dimensión de tipos de interacción. Valores únicos de tipo_interaccion en staging posts.
+      tipo_interaccion viene normalizado con initcap desde staging.
+    columns:
+      - name: id_tipo_interaccion
+        data_type: varchar
+        description: >
+          Clave surrogate generada desde el nombre del tipo de interacción.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: nombre
+        data_type: varchar
+        description: >
+          Nombre del tipo de interacción normalizado desde staging
+          (Like, Comentario, Guardado, Compartir).
+        data_tests:
+          - not_null
+          - unique
+
+  - name: int_fuente_ingesta
+    description: >
+      Dimensión de fuentes de ingesta. Valores únicos de source_api en staging posts.
+      source_api viene normalizado a lowercase desde staging.
+    columns:
+      - name: id_fuente_ingesta
+        data_type: varchar
+        description: >
+          Clave surrogate generada desde el nombre de la fuente de ingesta.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: nombre
+        data_type: varchar
+        description: >
+          Nombre de la fuente de ingesta normalizado desde staging
+          (api_v1, api_v2, manual_export).
+        data_tests:
+          - not_null
+          - unique
+
+  - name: int_hashtag
+    description: >
+      Dimensión de hashtags únicos generada desde int_hashtag_post_separar.
+      Los hashtags vienen sin '#' y en lowercase desde el modelo auxiliar.
+    columns:
+      - name: id_hashtag
+        data_type: varchar
+        description: >
+          Clave surrogate generada desde el texto del hashtag.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: hashtag
+        data_type: varchar
+        description: >
+          Texto del hashtag sin '#', en lowercase.
+        data_tests:
+          - not_null
+          - unique
+
+  - name: int_post_hashtag
+    description: >
+      Tabla puente post ↔ hashtag.
+      Cada fila representa una relación única entre un post y un hashtag.
+      El DISTINCT del SQL garantiza unicidad del par (id_post, id_hashtag).
+    columns:
+      - name: id_post
+        data_type: varchar
+        description: >
+          Clave surrogate del post. Generada desde post_id. FK hacia int_post.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_post')
+                field: id_post
+
+      - name: id_hashtag
+        data_type: varchar
+        description: >
+          Clave surrogate del hashtag. Generada desde hashtag. FK hacia int_hashtag.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_hashtag')
+                field: id_hashtag
+
+  - name: int_post
+    description: >
+      Hecho central de posts. Grano: un registro por post único (post_id).
+      Colapsa las hasta 4 filas por post de staging mediante QUALIFY conservando
+      el registro con _fivetran_synced más reciente.
+      Las interacciones por tipo se mantienen en int_interaccion.
+      Materializado como incremental con merge sobre codigo_post.
+    columns:
+      - name: id_post
+        data_type: varchar
+        description: >
+          Clave surrogate generada desde post_id.
+          Unicidad garantizada por el QUALIFY de este modelo.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: codigo_post
+        data_type: varchar
+        description: >
+          Identificador natural del post (post_id en staging). Validado not_null en staging.
+
+      - name: raw_json_id
+        data_type: varchar
+        description: >
+          UUID del registro JSON crudo en la tabla bronze. Validado not_null en staging.
+
+      - name: id_perfil_social
+        data_type: varchar
+        description: >
+          Identificador del perfil social. Obtenido mediante JOIN con snp_perfil_social
+          por username. Puede ser NULL si el perfil no existe en el snapshot vigente.
+          FK hacia int_perfil_social.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_perfil_social')
+                field: id_perfil_social
+
+      - name: id_empresa
+        data_type: varchar
+        description: >
+          Identificador natural de la empresa (empresa_id de staging).
+          Incluido para trazabilidad directa sin pasar por el perfil social.
+
+      - name: id_tipo_contenido
+        data_type: varchar
+        description: >
+          Clave surrogate del tipo de contenido. Generada desde tipo_contenido,
+          validado not_null en staging. FK hacia int_tipo_contenido.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('int_tipo_contenido')
+                field: id_tipo_contenido
+
+      - name: id_fuente_ingesta
+        data_type: varchar
+        description: >
+          Clave surrogate de la fuente de ingesta. Generada desde source_api,
+          validado not_null en staging. FK hacia int_fuente_ingesta.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('int_fuente_ingesta')
+                field: id_fuente_ingesta
+
+      - name: es_campania
+        data_type: boolean
+        description: >
+          Indica si el post pertenece a una campaña de Black Friday.
+          Renombrado desde es_campania_bf en staging, donde ya se valida not_null.
+
+      - name: fecha_publicacion
+        data_type: timestamp_ntz
+        description: >
+          Timestamp UTC de publicación del post en la plataforma.
+          Validado not_null en staging.
+
+      - name: descripcion_en
+        data_type: varchar
+        description: >
+          Texto descriptivo del post. Puede ser nulo (~7% de registros).
+
+      - name: patrocinado
+        data_type: boolean
+        description: >
+          Indica si el post es contenido patrocinado. Validado not_null en staging.
+
+      - name: visualizaciones
+        data_type: number
+        description: >
+          Número total de visualizaciones del post. Validado not_null en staging.
+
+      - name: alcance
+        data_type: number
+        description: >
+          Número de cuentas únicas que vieron el post. Validado not_null en staging.
+
+      - name: impresiones
+        data_type: number
+        description: >
+          Total de veces que se mostró el post (incluye vistas repetidas).
+          Validado not_null en staging.
+
+      - name: engagement_total
+        data_type: number
+        description: >
+          Suma total de todas las interacciones del post.
+          Validado not_null en staging.
+
+      - name: _fivetran_synced
+        data_type: timestamp_tz
+        description: >
+          Timestamp de la última sincronización de Fivetran. Validado en staging.
+          Usado como criterio de desempate en el QUALIFY y watermark para la
+          estrategia incremental.
+unit_tests:
+  - name: test_int_post_deduplica_filas_por_post
+    description: >
+      Valida que int_post colapsa correctamente las hasta 4 filas por post
+      (una por tipo_interaccion) conservando únicamente el registro con
+      el _fivetran_synced más reciente. El resultado debe tener una sola fila por post_id.
+    model: int_post
+    overrides:
+      macros:
+        is_incremental: false
+    given:
+      - input: ref('stg_social_cloud_schema__raw_posts_interacciones')
+        rows:
+          - post_id: "POST_001"
+            raw_json_id: "JSON_001"
+            username: "fcampoy"
+            empresa_id: "EMP_001"
+            plataforma: "Instagram"
+            fecha_publicacion: "2024-02-15 10:00:00"
+            tipo_contenido: "Reel"
+            descripcion_en: "Test post description"
+            patrocinado: false
+            es_campania_bf: false
+            hashtags: "#test #dbt"
+            visualizaciones_post: 1000
+            alcance_post: 800
+            impresiones_post: 1200
+            tipo_interaccion: "Like"
+            cantidad_interaccion: 150
+            engagement_total: 200
+            source_api: "api_v1"
+            created_at: "2024-02-15 10:00:00"
+            updated_at: "2024-03-01 12:00:00"
+            _fivetran_synced: "2024-03-01 12:00:00"
+
+          - post_id: "POST_001"
+            raw_json_id: "JSON_001"
+            username: "fcampoy"
+            empresa_id: "EMP_001"
+            plataforma: "Instagram"
+            fecha_publicacion: "2024-02-15 10:00:00"
+            tipo_contenido: "Reel"
+            descripcion_en: "Test post description"
+            patrocinado: false
+            es_campania_bf: false
+            hashtags: "#test #dbt"
+            visualizaciones_post: 1000
+            alcance_post: 800
+            impresiones_post: 1200
+            tipo_interaccion: "Comentario"
+            cantidad_interaccion: 30
+            engagement_total: 200
+            source_api: "api_v1"
+            created_at: "2024-02-15 10:00:00"
+            updated_at: "2024-02-20 09:00:00"
+            _fivetran_synced: "2024-02-20 09:00:00"
+
+          - post_id: "POST_001"
+            raw_json_id: "JSON_001"
+            username: "fcampoy"
+            empresa_id: "EMP_001"
+            plataforma: "Instagram"
+            fecha_publicacion: "2024-02-15 10:00:00"
+            tipo_contenido: "Reel"
+            descripcion_en: "Test post description"
+            patrocinado: false
+            es_campania_bf: false
+            hashtags: "#test #dbt"
+            visualizaciones_post: 1000
+            alcance_post: 800
+            impresiones_post: 1200
+            tipo_interaccion: "Guardado"
+            cantidad_interaccion: 15
+            engagement_total: 200
+            source_api: "api_v1"
+            created_at: "2024-02-15 10:00:00"
+            updated_at: "2024-02-18 08:00:00"
+            _fivetran_synced: "2024-02-18 08:00:00"
+
+          - post_id: "POST_001"
+            raw_json_id: "JSON_001"
+            username: "fcampoy"
+            empresa_id: "EMP_001"
+            plataforma: "Instagram"
+            fecha_publicacion: "2024-02-15 10:00:00"
+            tipo_contenido: "Reel"
+            descripcion_en: "Test post description"
+            patrocinado: false
+            es_campania_bf: false
+            hashtags: "#test #dbt"
+            visualizaciones_post: 1000
+            alcance_post: 800
+            impresiones_post: 1200
+            tipo_interaccion: "Compartir"
+            cantidad_interaccion: 5
+            engagement_total: 200
+            source_api: "api_v1"
+            created_at: "2024-02-15 10:00:00"
+            updated_at: "2024-02-16 07:00:00"
+            _fivetran_synced: "2024-02-16 07:00:00"
+
+          - post_id: "POST_002"
+            raw_json_id: "JSON_002"
+            username: "zpedrero"
+            empresa_id: "EMP_002"
+            plataforma: "Tiktok"
+            fecha_publicacion: "2024-03-10 15:00:00"
+            tipo_contenido: "Video"
+            descripcion_en: null
+            patrocinado: true
+            es_campania_bf: true
+            hashtags: "#tiktok"
+            visualizaciones_post: 5000
+            alcance_post: 4000
+            impresiones_post: 6000
+            tipo_interaccion: "Like"
+            cantidad_interaccion: 500
+            engagement_total: 500
+            source_api: "api_v2"
+            created_at: "2024-03-10 15:00:00"
+            updated_at: "2024-03-10 15:00:00"
+            _fivetran_synced: "2024-03-10 15:00:00"
+
+      - input: ref('snp_perfil_social')
+        rows:
+          - id_perfil_social: "64998930c5184ca7cc42732516399d4c"
+            nombre_usuario: "fcampoy"
+            dbt_valid_to: null
+
+          - id_perfil_social: "e32c5751c3d6f2c1c6363d2120ae2551"
+            nombre_usuario: "zpedrero"
+            dbt_valid_to: null
+
+    expect:
+      rows:
+        - id_post: "1725c50d6e5751f30b39aad25827d452"
+          codigo_post: "POST_001"
+          raw_json_id: "JSON_001"
+          id_perfil_social: "64998930c5184ca7cc42732516399d4c"
+          id_tipo_contenido: "428ecfdddc3e0489794aa52728819919"
+          id_fuente_ingesta: "75a053c602abf84810fa5c01b1c5fa72"
+          es_campania: false
+          descripcion_en: "Test post description"
+          patrocinado: false
+          visualizaciones: 1000
+          alcance: 800
+          impresiones: 1200
+          engagement_total: 200
+
+        - id_post: "9707d57d9da614f39d4fe8b8dddaa129"
+          codigo_post: "POST_002"
+          raw_json_id: "JSON_002"
+          id_perfil_social: "e32c5751c3d6f2c1c6363d2120ae2551"
+          id_tipo_contenido: "34e2d1989a1dbf75cd631596133ee5ee"
+          id_fuente_ingesta: "6544892c0bb4cc1c43062673871dc95e"
+          es_campania: true
+          descripcion_en: null
+          patrocinado: true
+          visualizaciones: 5000
+          alcance: 4000
+          impresiones: 6000
+          engagement_total: 500

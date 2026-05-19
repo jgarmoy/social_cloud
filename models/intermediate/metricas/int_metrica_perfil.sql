@@ -2,11 +2,15 @@ with
     source as (
         select * from {{ ref("stg_social_cloud_schema__raw_perfiles_empresas") }}
     ),
-    renamed as (
+
+    renombrar as (
         select
-            {{ dbt_utils.generate_surrogate_key(["semana_snapshot"]) }}
-            as id_metrica_perfil,
-            {{ dbt_utils.generate_surrogate_key(["username"]) }} as id_perfil_social,
+            {{
+                dbt_utils.generate_surrogate_key(
+                    ["username", "plataforma", "semana_snapshot"]
+                )
+            }} as id_metrica_perfil,
+            {{ dbt_utils.generate_surrogate_key(["perfil_id"]) }} as id_perfil_social,
             semana_snapshot,
             seguidores,
             alcance_semanal,
@@ -18,4 +22,4 @@ with
     )
 
 select *
-from renamed
+from renombrar

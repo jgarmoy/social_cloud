@@ -1,13 +1,23 @@
 with
     source as (select * from {{ ref("int_audiencia_demografica") }}),
-    renamed as (
+
+    generar_surrogate_key as (
         select
+            -- Explicar que hice esto porque al principio con fecha snapshot tenía
+            -- colisiones ya que no eran unicas
             {{
                 dbt_utils.generate_surrogate_key(
-                    ["username", "genero", "edad_segmento", "pais"]
+                    [
+                        "username",
+                        "plataforma",
+                        "genero",
+                        "edad_segmento",
+                        "pais",
+                        "fecha_snapshot",
+                    ]
                 )
             }} as id_audiencia,
-            {{ dbt_utils.generate_surrogate_key(["username"]) }} as id_perfil_social,
+            {{ dbt_utils.generate_surrogate_key(["perfil_id"]) }} as id_perfil_social,
             {{ dbt_utils.generate_surrogate_key(["genero"]) }} as id_genero,
             {{ dbt_utils.generate_surrogate_key(["edad_segmento"]) }} as id_rango_edad,
             {{ dbt_utils.generate_surrogate_key(["pais"]) }} as id_pais,
@@ -16,9 +26,8 @@ with
             seguidores,
             created_at,
             updated_at
-
         from source
     )
 
 select *
-from renamed
+from generar_surrogate_key

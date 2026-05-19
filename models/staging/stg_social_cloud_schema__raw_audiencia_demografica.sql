@@ -2,7 +2,7 @@ with
     source as (
         select * from {{ source("social_cloud_schema", "raw_audiencia_demografica") }}
     ),
-    renamed as (
+    renombrar as (
         select
             trim(empresa_id) as empresa_id,
             trim(perfil_id) as perfil_id,
@@ -48,6 +48,6 @@ with
             _fivetran_synced
         from source
     )
-    
+
 select *
-from renamed
+from renombrar

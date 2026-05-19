@@ -2,7 +2,7 @@ with
     source as (
         select * from {{ source("social_cloud_schema", "raw_posts_interacciones") }}
     ),
-    renamed as (
+    renombrar as (
         select
             trim(post_id) as post_id,
             raw_json_id,
@@ -41,4 +41,4 @@ with
     )
 
 select *
-from renamed
+from renombrar
