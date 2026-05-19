@@ -27,7 +27,7 @@ with
             p.engagement_total,
             i.total_interaccion,
             case
-                when p.alcance > 0 then round(p.engagement_total / p.alcance * 100, 4)
+                when p.alcance > 0 then round(p.engagement_total / p.alcance * 100, 4)::float
             end as engagement_rate_pct
 
         from post p

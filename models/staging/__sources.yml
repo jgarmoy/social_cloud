@@ -12,8 +12,8 @@ sources:
           Snapshots de segmentación de audiencia (género, edad, país) por perfil y plataforma.
         config:
           freshness:
-            warn_after: { count: 8, period: day }
-            error_after: { count: 15, period: day }
+            warn_after: { count: 2, period: day }
+            error_after: { count: 3, period: day }
           loaded_at_field: _fivetran_synced
         columns:
           - name: _line
@@ -82,8 +82,8 @@ sources:
           Snapshot semanal de perfiles de empresa por plataforma con métricas de alcance.
         config:
           freshness:
-            warn_after: { count: 8, period: day }
-            error_after: { count: 15, period: day }
+            warn_after: { count: 2, period: day }
+            error_after: { count: 3, period: day }
           loaded_at_field: _fivetran_synced
         columns:
           - name: _line
@@ -132,8 +132,8 @@ sources:
           Registro crudo de posts y sus interacciones por tipo (like, comentario, guardado, compartir).
         config:
           freshness:
-            warn_after: { count: 24, period: hour }
-            error_after: { count: 48, period: hour }
+            warn_after: { count: 2, period: hour }
+            error_after: { count: 3, period: hour }
           loaded_at_field: _fivetran_synced
         columns:
           - name: _line
