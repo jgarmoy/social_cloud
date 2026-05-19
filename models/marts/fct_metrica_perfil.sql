@@ -13,11 +13,11 @@ with
             impresiones_semanales,
             visitas_perfil,
             case
-                when seguidores > 0 then round(alcance_semanal / seguidores * 100, 4)
+                when seguidores > 0 then round(alcance_semanal / seguidores * 100, 4)::float
             end as tasa_alcance_pct,
             case
                 when impresiones_semanales > 0
-                then round(alcance_semanal / impresiones_semanales * 100, 4)
+                then round(alcance_semanal / impresiones_semanales * 100, 4)::float
             end as tasa_cobertura_pct
         from source
     )
