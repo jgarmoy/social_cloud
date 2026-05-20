@@ -18,7 +18,7 @@ with
             p.post_id as codigo_post,
             p.raw_json_id,
             ps.id_perfil_social,
-            p.empresa_id as id_empresa,
+            {{ dbt_utils.generate_surrogate_key(["p.empresa_id"]) }} as id_empresa,
             {{ dbt_utils.generate_surrogate_key(["p.tipo_contenido"]) }}
             as id_tipo_contenido,
             {{ dbt_utils.generate_surrogate_key(["p.source_api"]) }}
@@ -49,3 +49,19 @@ with
 
 select *
 from deduplicado
+
+-- SNAPSHOTS
+/* 
+select * 
+from source_perfil_social
+where nombre_usuario = 'tamayovidal'
+*/
+
+-- INCREMENTALES
+/*
+select *
+from source_posts
+where _fivetran_synced::date >= '2026-05-21'
+*/
+
+
