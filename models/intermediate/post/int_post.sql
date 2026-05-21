@@ -10,6 +10,11 @@
 with
     source_posts as (
         select * from {{ ref("stg_social_cloud_schema__raw_posts_interacciones") }}
+        {% if is_incremental() %}
+            where _fivetran_synced > (
+                select max(_fivetran_synced) from {{ this }}
+            )
+        {% endif %}
     ),
     source_perfil_social as (select * from {{ ref("snp_perfil_social") }}),
     renombrar as (
