@@ -6,4 +6,5 @@
     * Connector SDK
 * Snowflake
 * dbt
-* Github
+* Power BI
+* Git/Github
