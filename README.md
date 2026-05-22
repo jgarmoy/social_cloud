@@ -96,11 +96,11 @@ Una vez cargados, entra en acción dbt. La estructura de modelos que sigue Socia
 
 * Marts: En esta carpeta es donde desarrollo todo lo relacionado al modelo dimensional. 
     * Modelo dimensional de rendimiento del contenido:
-        ![Modelo dimensional de rendimiento del contenido](modelo_relacional.png)
+        ![Modelo dimensional de rendimiento del contenido](analisis_rendimiento_contenido.png)
     * Modelo dimensional de segmento audiencia:
-        ![Modelo dimensional de segmento audiencia](modelo_relacional.png)
+        ![Modelo dimensional de segmento audiencia](analisis_segmento_audiencia.png)
     * Modelo dimensional de métrica perfil:
-        ![Modelo dimensional de métrica perfil](modelo_relacional.png)
+        ![Modelo dimensional de métrica perfil](analisis_metrica_perfil.png)
 
 ### 8. Power BI consulta los datos transformados
 Power BI se conecta a Snowflake sobre las tablas ya transformadas por dbt.
